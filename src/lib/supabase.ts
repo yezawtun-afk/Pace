@@ -17,6 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from '@/lib/env';
+import type { Database } from '@/types/database';
 
 /**
  * When the environment is not configured we still create a client so the type
@@ -26,7 +27,7 @@ import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from '@/lib/env';
 const fallbackUrl = 'http://127.0.0.1:54321';
 const fallbackKey = 'public-anon-key-placeholder';
 
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   isSupabaseConfigured ? supabaseUrl : fallbackUrl,
   isSupabaseConfigured ? supabaseAnonKey : fallbackKey,
   {

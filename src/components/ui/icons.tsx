@@ -168,6 +168,25 @@ export function SparkleIcon(props: IconProps) {
   );
 }
 
+export function EyeIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <Path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <Circle cx="12" cy="12" r="3" />
+    </SvgIcon>
+  );
+}
+
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <Path d="M2.5 12S6 5.5 12 5.5c1.6 0 3 .5 4.2 1.2M21.5 12S18 18.5 12 18.5c-1.6 0-3-.5-4.2-1.2" />
+      <Circle cx="12" cy="12" r="3" />
+      <Line x1="4" y1="20" x2="20" y2="4" />
+    </SvgIcon>
+  );
+}
+
 /** Brand mark: a single leaf, used in the sidebar and the setup screen. */
 export function LeafIcon(props: IconProps) {
   return (
