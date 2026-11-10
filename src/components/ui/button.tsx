@@ -5,7 +5,7 @@ import { AppText } from '@/components/ui/text';
 import { Layout, Radius, Space } from '@/constants/theme';
 import { useTheme } from '@/lib/use-theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'quiet';
+type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger';
 
 type ButtonProps = {
   label: string;
@@ -41,13 +41,17 @@ export function Button({
       ? colors.accent
       : variant === 'secondary'
         ? colors.surface
-        : 'transparent';
+        : variant === 'danger'
+          ? colors.dangerSoft
+          : 'transparent';
   const foreground =
     variant === 'primary'
       ? colors.accentText
       : variant === 'secondary'
         ? colors.text
-        : colors.accent;
+        : variant === 'danger'
+          ? colors.danger
+          : colors.accent;
   const borderColor = variant === 'secondary' ? colors.border : 'transparent';
 
   return (
@@ -87,10 +91,12 @@ type TextLinkProps = {
   label: string;
   onPress: () => void;
   align?: 'left' | 'right' | 'center';
+  /** Use "danger" for destructive actions such as deleting. */
+  tone?: 'accent' | 'danger';
 };
 
 /** Quiet text button for "Forgot password?", "Create an account", … */
-export function TextLink({ label, onPress, align = 'left' }: TextLinkProps) {
+export function TextLink({ label, onPress, align = 'left', tone = 'accent' }: TextLinkProps) {
   const { colors } = useTheme();
 
   return (
@@ -100,10 +106,13 @@ export function TextLink({ label, onPress, align = 'left' }: TextLinkProps) {
       hitSlop={8}
       style={({ pressed }) => ({
         alignSelf: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
-        paddingVertical: Space.sm,
+        // Keeps the touch target honest without making the text look like a button.
+        minHeight: 32,
+        justifyContent: 'center',
+        paddingVertical: Space.xs,
         opacity: pressed ? 0.6 : 1,
       })}>
-      <AppText variant="smallStrong" color={colors.accent}>
+      <AppText variant="smallStrong" color={tone === 'danger' ? colors.danger : colors.accent}>
         {label}
       </AppText>
     </Pressable>

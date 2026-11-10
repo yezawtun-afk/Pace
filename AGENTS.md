@@ -16,8 +16,15 @@ policies, indexes, updated_at triggers, `handle_new_user()` profile trigger,
 clearing, sign-up / sign-in / sign-out / password reset, three-step onboarding, route guards via
 `Stack.Protected`. Docs live in `supabase/README.md`.
 
-Next phases, in order: 3 tasks → 4 habits → 5 Today screen → 6 journal + evening review →
+Next phases, in order: 4 habits → 5 Today screen → 6 journal + evening review →
 7 reminders/settings/export → 8 polish + realtime + offline queue → 9 release.
+
+Phase 3 (tasks) is done: `src/features/tasks/` (`keys.ts`, `grouping.ts` pure logic, `api.ts`,
+`queries.ts`), `TaskRow`, `DateField` (presets + month calendar), `QuickAdd`, `TaskEditor` sheet,
+new primitives `Chip`/`ChipRow`/`Dot`, `Checkbox`, `Sheet`, `ErrorState`; the tasks screen has
+Today / Upcoming / All / Done views. Categories are created and deleted inside the editor.
+Server-side filtering in `fetchTasks(view)`; sorting and grouping stay in `grouping.ts` so they
+can be unit-tested.
 
 ### Auth architecture (phase 2)
 

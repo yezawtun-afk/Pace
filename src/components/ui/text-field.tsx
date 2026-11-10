@@ -26,6 +26,7 @@ export function TextField({ label, error, hint, secure = false, ...inputProps }:
   const [revealed, setRevealed] = useState(false);
 
   const borderColor = error ? colors.danger : focused ? colors.accent : colors.border;
+  const isMultiline = Boolean(inputProps.multiline);
 
   return (
     <View style={{ gap: Space.xs + 2 }}>
@@ -34,7 +35,7 @@ export function TextField({ label, error, hint, secure = false, ...inputProps }:
       <View
         style={{
           flexDirection: 'row',
-          alignItems: 'center',
+          alignItems: isMultiline ? 'flex-start' : 'center',
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor,
@@ -56,11 +57,13 @@ export function TextField({ label, error, hint, secure = false, ...inputProps }:
           placeholderTextColor={colors.textTertiary}
           style={{
             flex: 1,
-            minHeight: 46,
-            paddingVertical: Space.sm,
+            minHeight: isMultiline ? 96 : 46,
+            paddingTop: isMultiline ? Space.md : Space.sm,
+            paddingBottom: Space.sm,
             color: colors.text,
             fontFamily: FontFamily,
             fontSize: 16,
+            textAlignVertical: isMultiline ? 'top' : 'auto',
           }}
         />
 

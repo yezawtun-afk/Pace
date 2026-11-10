@@ -149,6 +149,14 @@ export function ChevronRightIcon(props: IconProps) {
   );
 }
 
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <Polyline points="15 18 9 12 15 6" />
+    </SvgIcon>
+  );
+}
+
 export function CloseIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>

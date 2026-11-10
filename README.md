@@ -9,9 +9,9 @@ becomes that day's journal entry.
 Built for Android, iOS and web from a single Expo + React Native codebase, with data stored in
 Supabase so every device sees the same thing. Each account only ever sees its own rows.
 
-> **Status:** phase 2 of 9 is complete — the database schema with row-level security, accounts,
-> sign-in, password reset and a three-step onboarding. Tasks, habits and the journal arrive next.
-> See [Roadmap](#roadmap).
+> **Status:** phase 3 of 9 is complete — the database with row-level security, accounts, onboarding
+> and a full task list (priorities, due dates, categories, four views, quick add). Habits, the Today
+> screen and the journal arrive next. See [Roadmap](#roadmap).
 
 ## What it will do
 
@@ -150,6 +150,31 @@ same Wi-Fi network.
 | `npm run format`                  | Format the repo with Prettier         |
 | `npm run export:web`              | Produce a static web build in `dist/` |
 
+## How tasks work
+
+Open **Tasks** in the nav. The screen has four views over the same table:
+
+| View         | Shows                                                            |
+| ------------ | ---------------------------------------------------------------- |
+| **Today**    | Tasks due today or earlier, plus anything you checked off today   |
+| **Upcoming** | Future due dates, grouped by day (Tomorrow, Friday, Fri 20 Nov …) |
+| **All**      | Every unfinished task, dated or not                              |
+| **Done**     | The 100 most recently completed tasks                            |
+
+- **Quick add.** Type in the field above the list and press Enter. New tasks inherit a sensible
+  date from the current view: today in Today, tomorrow in Upcoming, no date in All.
+- **Details.** Tapping a row opens a sheet with the title, notes, due date (four one-tap presets
+  plus a month calendar), time, priority (P1 urgent → P4 no rush) and category.
+- **Categories** are yours: create them inside the sheet under **Category → New category**, and
+  delete them under **Manage**. Deleting a category never deletes its tasks — they just lose the
+  label.
+- **Checking off** is optimistic: the box flips immediately and rolls back if the save fails, and
+  a finished task stays in Today until the day ends.
+- **Sorting** is by date (undated last), then priority, then time — the same order everywhere.
+
+Tasks live in the `tasks` and `categories` tables. Both are protected by row-level security, so
+each account only ever reads and writes its own rows.
+
 ## Project structure
 
 ```
@@ -164,7 +189,7 @@ src/
     ui/                 primitives: AppText, Card, Screen, Button, TextField, icons, …
     app-shell.tsx       bottom tabs on phones, sidebar on wide screens
   constants/            design tokens (theme.ts) + starter habits
-  features/             per-feature API calls, hooks and components (auth, onboarding)
+  features/             per-feature API calls, hooks and components (auth, onboarding, tasks)
   hooks/                small reusable hooks
   lib/                  Supabase client, query client, preferences, env, time helpers, theme hook
   types/                database types + env typings
@@ -190,7 +215,7 @@ supabase/
       client, env setup, docs
 - [x] **2. Database and auth** — migrations with RLS, sign-up/in/out, password reset, profiles,
       onboarding
-- [ ] **3. Tasks** — CRUD, categories, priorities, due dates, views, quick add
+- [x] **3. Tasks** — CRUD, categories, priorities, due dates, views, quick add
 - [ ] **4. Habits** — CRUD, check-off, back-fill, streaks with tests, stats and heatmap
 - [ ] **5. Today** — combined habits + tasks, progress ring, overdue handling
 - [ ] **6. Journal and evening review** — guided review, prompts, mood, tags, history, search
