@@ -97,6 +97,23 @@ npm run export:web       # static web build into dist/
 Always use `npx expo install <pkg>` (not `npm install`) for packages that have native code, so the
 SDK-compatible version is picked.
 
+## Git
+
+**Every phase ends with a commit _and_ a push.** The user asked for this explicitly, so do not
+stop at `git commit`:
+
+```powershell
+git add -A
+git commit -m "Phase N: <short summary>"
+git push origin master
+git status -sb   # must show "## master...origin/master" with no ahead/behind markers
+```
+
+One commit per phase, pushed to `origin` (`https://github.com/yezawtun-afk/Pace.git`). PowerShell
+prints git's progress on stderr and shows it as an error even when the push worked — confirm with
+`git log origin/master --oneline -1` instead of trusting the red text. Never force-push or rewrite
+history: previous phases are already public.
+
 ## Environment
 
 `.env` (gitignored, created from `.env.example`) needs both values from the Supabase dashboard.
