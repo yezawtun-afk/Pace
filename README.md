@@ -9,9 +9,10 @@ becomes that day's journal entry.
 Built for Android, iOS and web from a single Expo + React Native codebase, with data stored in
 Supabase so every device sees the same thing. Each account only ever sees its own rows.
 
-> **Status:** phase 3 of 9 is complete — the database with row-level security, accounts, onboarding
-> and a full task list (priorities, due dates, categories, four views, quick add). Habits, the Today
-> screen and the journal arrive next. See [Roadmap](#roadmap).
+> **Status:** phase 3 of 9 is complete — the database with row-level security, accounts, onboarding,
+> a full task list (priorities, due dates, categories, four views, quick add) and a guest mode you
+> can try without signing up. Habits, the Today screen and the journal arrive next. See
+> [Roadmap](#roadmap).
 
 ## What it will do
 
@@ -87,6 +88,9 @@ redirect URLs the password-reset emails need:
 
 Full details, including the email-confirmation toggle and a verification query, are in
 [`supabase/README.md`](supabase/README.md).
+
+Finally, still under **Authentication**, open **Sign In / Providers** and turn on
+**Anonymous sign-ins**. That is what the **Continue as guest** button on the sign-in screen uses.
 
 ### 4. Add your two public settings
 
@@ -174,6 +178,21 @@ Open **Tasks** in the nav. The screen has four views over the same table:
 
 Tasks live in the `tasks` and `categories` tables. Both are protected by row-level security, so
 each account only ever reads and writes its own rows.
+
+## How guest mode works
+
+**Continue as guest** on the sign-in screen creates an anonymous Supabase account: a real user row
+with no email or password. Nothing is stored locally and nothing is faked — a guest is subject to
+the same row-level security as everyone else, so every screen behaves exactly as it does for a
+signed-in account.
+
+- A guest goes through the same three-step onboarding and lands with starter habits.
+- Tasks, habits and journal entries are tied to that account like any other.
+- **Settings → Account → Create an account** adds an email and password to the same user id, so
+  everything is kept. With **Confirm email** on, Supabase sends a link first.
+- Because a guest has no credentials, they can only be signed in on the device that created them.
+  Turning on **Anonymous sign-ins** in the dashboard is required — see
+  [`supabase/README.md`](supabase/README.md).
 
 ## Project structure
 

@@ -37,6 +37,18 @@ export function friendlyAuthError(error: unknown): string {
   if (text.includes('over_email_send_rate_limit') || text.includes('rate limit')) {
     return 'Too many emails in a short time. Wait a minute, then try again.';
   }
+  if (
+    text.includes('anonymous_provider_disabled') ||
+    text.includes('anonymous sign-ins are disabled')
+  ) {
+    return 'Guest mode is switched off in Supabase. Turn on "Anonymous sign-ins" under Authentication → Sign In / Providers.';
+  }
+  if (text.includes('email_address_invalid') || text.includes('invalid email')) {
+    return 'That email address does not look right. Check it and try again.';
+  }
+  if (text.includes('already been registered') || text.includes('email_exists')) {
+    return 'That email already belongs to an account. Sign in with it instead.';
+  }
   if (text.includes('same_password')) {
     return 'That is already your password. Pick a different one.';
   }

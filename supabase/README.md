@@ -77,6 +77,23 @@ phone should open the app itself. Add your production URL (for example
 Either works with the app; it reads the session Supabase hands back and sends the user to
 onboarding or to the sign-in screen with an explanation.
 
+### Anonymous sign-ins (guest mode)
+
+**Authentication → Sign In / Providers → Anonymous sign-ins**
+
+Turn this **on** so the **Continue as guest** button works. A guest is a real Supabase user with
+no email or password:
+
+- it gets its own `auth.users` row and its own `profiles` row, created by the same
+  `handle_new_user()` trigger;
+- every table's row-level security applies exactly as it does for an email account;
+- the guest keeps their data when they later add an email and password
+  (Settings → Account → **Create an account**), because the user id never changes.
+
+If the switch is off, the sign-in screen shows a plain explanation instead of failing silently.
+Guests can only be deleted by you, not by them, so if you build a cleanup job later target users
+where `is_anonymous = true` and `created_at` is old.
+
 ### Password rules
 
 **Authentication → Providers → Email → Password requirements** — the app enforces 8 characters

@@ -54,6 +54,75 @@ export async function signInWithPassword({ email, password }: { email: string; p
   return data;
 }
 
+/**
+ * Guest mode: creates a real Supabase user that has no email or password.
+ *
+ * This is deliberately not a "local demo" mode — the guest gets the same
+ * row-level security, the same tables and the same code path as anyone else,
+ * so nothing is faked and nothing has to be migrated later. It requires
+ * "Anonymous sign-ins" to be enabled in the Supabase dashboard
+ * (Authentication → Sign In / Providers).
+ */
+export async function signInAsGuest() {
+  const { data, error } = await supabase.auth.signInAnonymously({
+    options: {
+      // Read by the handle_new_user() trigger to fill in the profile row.
+      data: {
+        display_name: 'Guest',
+        timezone: detectTimeZone(),
+      },
+    },
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export type UpgradeAccountInput = {
+  email: string;
+  password: string;
+  displayName?: string;
+};
+
+/**
+ * Turns the current guest into a real account.
+ *
+ * `updateUser` keeps the same user id, so every task, habit and journal entry
+ * stays attached — nothing is copied or re-created. When "Confirm email" is on
+ * (the default), Supabase sends a confirmation link and the account is finished
+ * when the guest opens it.
+ */
+export async function upgradeGuestAccount({ email, password, displayName }: UpgradeAccountInput) {
+  const name = displayName?.trim();
+
+  const { data, error } = await supabase.auth.updateUser({
+    email: email.trim(),
+    password,
+    // Only replace the "Guest" name when a real one was typed.
+    ...(name ? { data: { display_name: name } } : {}),
+  });
+
+  if (error) throw error;
+
+  // `profiles.display_name` is written by the sign-up trigger, which already
+  // ran for this user — so the name typed here has to be saved separately.
+  // A failure here is cosmetic: the account itself is already real, so it must
+  // not turn a successful upgrade into an error message.
+  if (name && data.user) {
+    await supabase
+      .from('profiles')
+      .update({ display_name: name })
+      .eq('id', data.user.id)
+      .then(({ error: profileError }) => {
+        if (profileError) {
+          console.warn('Could not save the display name', profileError.message);
+        }
+      });
+  }
+
+  return data;
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;

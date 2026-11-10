@@ -14,6 +14,8 @@ import { supabase } from '@/lib/supabase';
 
 type AuthContextValue = {
   session: Session | null;
+  /** True when the session belongs to an anonymous (guest) account. */
+  isGuest: boolean;
   /** True until the stored session has been read once. */
   isLoading: boolean;
 };
@@ -68,7 +70,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const value = useMemo<AuthContextValue>(() => ({ session, isLoading }), [session, isLoading]);
+  // Supabase marks anonymous (guest) accounts with `is_anonymous`. It is part
+  // of the user object, so an upgrade to a real account flips this to false
+  // without any extra bookkeeping on our side.
+  const isGuest = session?.user.is_anonymous === true;
+
+  const value = useMemo<AuthContextValue>(
+    () => ({ session, isGuest, isLoading }),
+    [session, isGuest, isLoading],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Button, TextLink } from '@/components/ui/button';
+import { Divider } from '@/components/ui/divider';
 import { FormMessage } from '@/components/ui/form-message';
 import { TextField } from '@/components/ui/text-field';
 import { AppText } from '@/components/ui/text';
 import { Space } from '@/constants/theme';
-import { signInWithPassword } from '@/features/auth/api';
+import { signInAsGuest, signInWithPassword } from '@/features/auth/api';
 import { AuthScreen } from '@/features/auth/components/auth-screen';
 import { friendlyAuthError } from '@/features/auth/errors';
 
@@ -16,6 +17,7 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [startingGuest, setStartingGuest] = useState(false);
 
   async function handleSignIn() {
     if (submitting) return;
@@ -38,6 +40,23 @@ export default function SignInScreen() {
     } catch (caught) {
       setError(friendlyAuthError(caught));
       setSubmitting(false);
+    }
+  }
+
+  /**
+   * Starts a guest account: a real Supabase user with no email or password.
+   * The guard then sends them through onboarding like anyone else.
+   */
+  async function handleGuest() {
+    if (startingGuest) return;
+    setError(null);
+    setStartingGuest(true);
+
+    try {
+      await signInAsGuest();
+    } catch (caught) {
+      setError(friendlyAuthError(caught));
+      setStartingGuest(false);
     }
   }
 
@@ -95,6 +114,21 @@ export default function SignInScreen() {
       {error ? <FormMessage tone="error" message={error} /> : null}
 
       <Button label="Sign in" onPress={handleSignIn} loading={submitting} />
+
+      <Divider label="or" />
+
+      <View style={{ gap: Space.sm }}>
+        <Button
+          label="Continue as guest"
+          variant="secondary"
+          onPress={handleGuest}
+          loading={startingGuest}
+          accessibilityHint="Starts a temporary account you can keep by adding an email later."
+        />
+        <AppText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+          Try everything now. Add an email later and keep your progress.
+        </AppText>
+      </View>
     </AuthScreen>
   );
 }

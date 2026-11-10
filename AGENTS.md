@@ -26,6 +26,19 @@ Today / Upcoming / All / Done views. Categories are created and deleted inside t
 Server-side filtering in `fetchTasks(view)`; sorting and grouping stay in `grouping.ts` so they
 can be unit-tested.
 
+Guest mode (anonymous sign-in) sits on top of phase 2: `signInAsGuest()` in
+`src/features/auth/api.ts`, `isGuest` on `useAuth()`, the **Continue as guest** button on the
+sign-in screen, and an Account card in Settings whose sheet calls `upgradeGuestAccount()` —
+`updateUser()` on the current user, so the guest keeps their rows, plus a follow-up write to
+`profiles.display_name` (the sign-up trigger only runs once). Needs **Anonymous sign-ins**
+enabled in the dashboard; if it is off the error message says so. `signOut()` still has no UI, so a
+guest cannot lock themselves out yet — phase 7 (account settings) must add a warning there.
+
+Accessibility gap found while testing web: React Native Web 0.21 does not turn
+`accessibilityState={{ checked }}` into `aria-checked`, so the checkbox state is only carried by
+the changing label ("mark … as done" / "as not done"). Add the `aria-*` props next to
+`accessibilityState` in `Checkbox`, `Chip` and `SegmentedControl` during phase 8.
+
 ### Auth architecture (phase 2)
 
 - `src/app/_layout.tsx` holds the only guards. `Stack.Protected` groups: `(auth)` when signed out,
