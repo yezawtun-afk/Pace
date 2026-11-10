@@ -37,9 +37,17 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const background =
-    variant === 'primary' ? colors.accent : variant === 'secondary' ? colors.surface : 'transparent';
+    variant === 'primary'
+      ? colors.accent
+      : variant === 'secondary'
+        ? colors.surface
+        : 'transparent';
   const foreground =
-    variant === 'primary' ? colors.accentText : variant === 'secondary' ? colors.text : colors.accent;
+    variant === 'primary'
+      ? colors.accentText
+      : variant === 'secondary'
+        ? colors.text
+        : colors.accent;
   const borderColor = variant === 'secondary' ? colors.border : 'transparent';
 
   return (

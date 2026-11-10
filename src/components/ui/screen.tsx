@@ -93,7 +93,9 @@ export function ScreenHeader({ eyebrow, title, subtitle, action }: ScreenHeaderP
 
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: Space.lg }}>
         <View style={{ flex: 1 }}>
-          <AppText variant="display">{title}</AppText>
+          <AppText variant="display" accessibilityRole="header">
+            {title}
+          </AppText>
           {subtitle ? (
             <AppText variant="small" tone="secondary" style={{ marginTop: Space.sm }}>
               {subtitle}

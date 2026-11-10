@@ -27,7 +27,6 @@ const HYDRATION_TIMEOUT_MS = 600;
 
 export default function RootLayout() {
   const hasHydrated = usePreferences((state) => state.hasHydrated);
-  const { colors } = useTheme();
 
   useEffect(() => {
     const timer = setTimeout(() => {

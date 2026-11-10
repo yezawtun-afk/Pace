@@ -10,8 +10,29 @@ Phase 1 (foundation) is done: Expo + TypeScript + Expo Router, theme system (lig
 responsive shell (bottom tabs on phones, sidebar on wide screens), Supabase client, env handling,
 empty-state screens, README and this file.
 
-Next phases, in order: 2 database + auth → 3 tasks → 4 habits → 5 Today screen → 6 journal +
-evening review → 7 reminders/settings/export → 8 polish + realtime + offline queue → 9 release.
+Phase 2 (database + auth) is done: `supabase/migrations/0001_initial_schema.sql` (8 tables, 31 RLS
+policies, indexes, updated_at triggers, `handle_new_user()` profile trigger,
+`delete_own_account()`), hand-written `src/types/database.ts`, auth provider with query-cache
+clearing, sign-up / sign-in / sign-out / password reset, three-step onboarding, route guards via
+`Stack.Protected`. Docs live in `supabase/README.md`.
+
+Next phases, in order: 3 tasks → 4 habits → 5 Today screen → 6 journal + evening review →
+7 reminders/settings/export → 8 polish + realtime + offline queue → 9 release.
+
+### Auth architecture (phase 2)
+
+- `src/app/_layout.tsx` holds the only guards. `Stack.Protected` groups: `(auth)` when signed out,
+  `onboarding` while `profiles.onboarding_completed` is false, `(app)` after it is true.
+  `reset-password` and `setup-required` sit outside the guards on purpose.
+- Every Supabase call for auth/profile lives in `src/features/auth/api.ts`; onboarding inserts in
+  `src/features/onboarding/api.ts` (habits first, then the profile flag, with a habit rollback if
+  the profile update fails).
+- `useProfile()` is the single source for the profile row; onboarding writes the returned row into
+  the query cache with `setQueryData` so the guard flips without a refetch.
+- Recovery links: on web supabase-js reads the URL itself; on native `acceptRecoveryLink(url)`
+  turns the `pace://` deep link into a session (`setSession` / `exchangeCodeForSession` /
+  `verifyOtp`).
+- The theme is still local (Zustand). `profiles.theme` exists and is reserved for phase 7 sync.
 
 ## Stack (do not swap without asking)
 
@@ -32,12 +53,12 @@ evening review → 7 reminders/settings/export → 8 polish + realtime + offline
 src/app/            routes only, one file per screen, _layout.tsx per navigator
 src/components/     shared UI (ui/ holds primitives: text, card, screen, icons, …)
 src/components/app-shell.tsx   navigation chrome + NAV_ITEMS (single source of truth)
-src/features/       per-feature api.ts / hooks / components (habits, tasks, journal, …)
-src/lib/            supabase client, query client, preferences, env, theme hook
+src/features/       per-feature api.ts / keys.ts / hooks / components (auth, onboarding, …)
+src/lib/            supabase client, query client, preferences, env, time helpers, theme hook
 src/constants/      design tokens (theme.ts), static content (prompts, starter habits)
 src/hooks/          small reusable hooks
-src/types/          generated DB types + local env types
-supabase/migrations/ SQL migrations (added in phase 2)
+src/types/          database.ts (must match the SQL) + local env types
+supabase/           migrations/0001_initial_schema.sql + README with dashboard steps
 ```
 
 ## Conventions

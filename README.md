@@ -9,9 +9,9 @@ becomes that day's journal entry.
 Built for Android, iOS and web from a single Expo + React Native codebase, with data stored in
 Supabase so every device sees the same thing. Each account only ever sees its own rows.
 
-> **Status:** phase 1 of 9 is complete — app shell, theme system, Supabase wiring and the screen
-> frames. Tasks, habits, journal and reminders arrive in the next phases. See
-> [Roadmap](#roadmap).
+> **Status:** phase 2 of 9 is complete — the database schema with row-level security, accounts,
+> sign-in, password reset and a three-step onboarding. Tasks, habits and the journal arrive next.
+> See [Roadmap](#roadmap).
 
 ## What it will do
 
@@ -65,7 +65,30 @@ npm install
    password (store it somewhere safe) and the region closest to you.
 3. Wait a minute or two while the project is provisioned.
 
-### 3. Add your two public settings
+### 3. Create the database
+
+Pace needs eight tables, their indexes and their security policies. They all live in one file:
+`supabase/migrations/0001_initial_schema.sql`.
+
+1. In your Supabase project open **SQL Editor → New query**.
+2. Open `supabase/migrations/0001_initial_schema.sql`, select all (`Ctrl+A`), copy (`Ctrl+C`).
+3. Paste it into the editor and press **Run**.
+
+You should see **Success. No rows returned** — that is the expected result for a file that only
+creates things. Running it twice is safe: it stops early with `Pace schema already exists`.
+
+Then, while you are in the dashboard, open **Authentication → URL Configuration** and add the
+redirect URLs the password-reset emails need:
+
+| Setting           | Value                                      |
+| ----------------- | ------------------------------------------ |
+| **Site URL**      | `http://localhost:8081`                    |
+| **Redirect URLs** | `http://localhost:8081/**` and `pace://**` |
+
+Full details, including the email-confirmation toggle and a verification query, are in
+[`supabase/README.md`](supabase/README.md).
+
+### 4. Add your two public settings
 
 1. In the project, open **Project Settings → API**.
 2. Copy **Project URL** and the **anon public** key.
@@ -91,7 +114,7 @@ npm install
 If the two values are missing or malformed, the app shows a **Connect your database** screen with
 these same steps instead of failing with a network error.
 
-### 4. Run the app
+### 5. Run the app
 
 ```powershell
 npm start
@@ -133,16 +156,21 @@ same Wi-Fi network.
 src/
   app/                  routes (Expo Router) — one file per screen
     (app)/              signed-in area: today, habits, journal, tasks, settings
+    (auth)/             signed out area: sign-in, sign-up, forgot-password
+    onboarding.tsx      three-step first run: welcome, starter habits, details
+    reset-password.tsx  opened from the emailed reset link
     setup-required.tsx  shown when .env has no Supabase credentials
   components/
-    ui/                 primitives: AppText, Card, Screen, EmptyState, icons, …
+    ui/                 primitives: AppText, Card, Screen, Button, TextField, icons, …
     app-shell.tsx       bottom tabs on phones, sidebar on wide screens
-  constants/theme.ts    design tokens: colours, spacing, radii, type scale
-  features/             per-feature API calls, hooks and components (grows per phase)
+  constants/            design tokens (theme.ts) + starter habits
+  features/             per-feature API calls, hooks and components (auth, onboarding)
   hooks/                small reusable hooks
-  lib/                  Supabase client, query client, preferences, env, theme hook
-  types/                generated database types + env typings
-supabase/migrations/    SQL migrations and RLS policies (phase 2)
+  lib/                  Supabase client, query client, preferences, env, time helpers, theme hook
+  types/                database types + env typings
+supabase/
+  migrations/           the SQL you paste into the dashboard SQL Editor
+  README.md             database and auth setup, verification queries, troubleshooting
 ```
 
 ## Design notes
@@ -160,7 +188,7 @@ supabase/migrations/    SQL migrations and RLS policies (phase 2)
 
 - [x] **1. Foundation** — Expo + TypeScript + Expo Router, theme, responsive shell, Supabase
       client, env setup, docs
-- [ ] **2. Database and auth** — migrations with RLS, sign-up/in/out, password reset, profiles,
+- [x] **2. Database and auth** — migrations with RLS, sign-up/in/out, password reset, profiles,
       onboarding
 - [ ] **3. Tasks** — CRUD, categories, priorities, due dates, views, quick add
 - [ ] **4. Habits** — CRUD, check-off, back-fill, streaks with tests, stats and heatmap
@@ -181,6 +209,21 @@ projects pause after about a week without traffic. Open the dashboard and restor
 
 **Expo Go shows an older version of the app.** Shake the device (or press `r` in the terminal) to
 reload, and make sure the phone is on the same network as the computer.
+
+**`Pace schema already exists` in the SQL Editor.** The migration has already run on that project.
+Nothing is broken — skip it and continue.
+
+**"Could not load your profile" after signing in.** Either the Supabase project is paused, or the
+SQL migration was never run so the `profiles` table does not exist. Check the dashboard, then run
+the verification query in [`supabase/README.md`](supabase/README.md).
+
+**The password-reset email link opens a blank page.** The redirect URL is not allow-listed. Add
+`http://localhost:8081/**` under **Authentication → URL Configuration → Redirect URLs** in
+Supabase, and use the newest email (old links expire).
+
+**The confirmation email never arrives.** Free Supabase projects rate-limit emails to a few per
+hour, and they often land in spam. Wait a minute, use "Resend the email", or switch
+**Authentication → Providers → Email → Confirm email** off while developing.
 
 **Windows: `npm start` keeps printing a QR code but nothing opens.** Press `w` in that terminal
 window to open the web build, or `a` to launch an Android emulator.

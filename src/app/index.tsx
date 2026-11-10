@@ -30,7 +30,5 @@ export default function Index() {
     return null;
   }
 
-  return (
-    <Redirect href={profileQuery.data?.onboarding_completed ? '/today' : '/onboarding'} />
-  );
+  return <Redirect href={profileQuery.data?.onboarding_completed ? '/today' : '/onboarding'} />;
 }

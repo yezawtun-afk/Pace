@@ -58,7 +58,10 @@ export function AuthScreen({ title, subtitle, children, footer }: AuthScreenProp
             </View>
           </View>
 
-          <AppText variant="title" style={{ marginTop: Space.xxl + Space.xs }}>
+          <AppText
+            variant="title"
+            accessibilityRole="header"
+            style={{ marginTop: Space.xxl + Space.xs }}>
             {title}
           </AppText>
           <AppText variant="small" tone="secondary" style={{ marginTop: Space.sm }}>

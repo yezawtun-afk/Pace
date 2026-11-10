@@ -120,6 +120,84 @@ export async function updateProfile(userId: string, patch: ProfileUpdate): Promi
   return data;
 }
 
+// --- password recovery links ------------------------------------------------
+// On the web, supabase-js notices the tokens in the URL by itself. On a phone
+// the link opens the app through a `pace://` deep link, which supabase-js does
+// not watch, so the screen hands us the URL and we finish the sign-in here.
+
+/** Reads `key=value` pairs from both the query string and the `#` fragment. */
+function readLinkParams(url: string): Record<string, string> {
+  const params: Record<string, string> = {};
+  const [beforeHash, fragment] = url.split('#');
+
+  const collect = (text: string) => {
+    for (const pair of text.split('&')) {
+      if (!pair) continue;
+      const index = pair.indexOf('=');
+      if (index === -1) continue;
+      const key = decodeURIComponent(pair.slice(0, index));
+      const value = decodeURIComponent(pair.slice(index + 1).replace(/\+/g, ' '));
+      params[key] = value;
+    }
+  };
+
+  const queryStart = beforeHash.indexOf('?');
+  if (queryStart >= 0) collect(beforeHash.slice(queryStart + 1));
+  if (fragment) collect(fragment);
+
+  return params;
+}
+
+/**
+ * Turns an emailed recovery link into a signed-in session.
+ *
+ * Returns true when the link carried usable credentials, false when the URL was
+ * unrelated (for example the app opening normally). Throws when the link is
+ * invalid or already used, so the screen can explain that.
+ */
+export async function acceptRecoveryLink(url: string): Promise<boolean> {
+  const params = readLinkParams(url);
+
+  if (params.error || params.error_description) {
+    throw Object.assign(new Error(params.error_description ?? params.error), {
+      code: params.error_code ?? 'link_error',
+    });
+  }
+
+  if (params.access_token && params.refresh_token) {
+    const { error } = await supabase.auth.setSession({
+      access_token: params.access_token,
+      refresh_token: params.refresh_token,
+    });
+    if (error) throw error;
+    return true;
+  }
+
+  if (params.code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(params.code);
+    if (error) throw error;
+    return true;
+  }
+
+  if (params.token_hash && params.type === 'recovery') {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: params.token_hash,
+      type: 'recovery',
+    });
+    if (error) throw error;
+    return true;
+  }
+
+  if (params.type === 'recovery') {
+    // A recovery URL with no credentials: it was already used, or it expired.
+    throw Object.assign(new Error('This reset link has already been used or has expired.'), {
+      code: 'link_used',
+    });
+  }
+
+  return false;
+}
+
 /**
  * Deletes the auth user; the database cascades to every table, so all of the
  * user's data goes with it. Implemented as a SECURITY DEFINER function so the
