@@ -8,26 +8,15 @@
  * everything here compares calendar days in the device's time zone.
  */
 
-import { differenceInCalendarDays, format, parseISO, startOfDay } from 'date-fns';
+import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 
+import { startOfTodayIso, todayString, toDateString } from '@/lib/dates';
 import type { Task } from '@/types/database';
 
+// Re-exported so screens can import everything date-related from one place.
+export { startOfTodayIso, todayString, toDateString };
+
 export type TaskView = 'today' | 'upcoming' | 'all' | 'done';
-
-/** "2026-11-10" for the device's current day. */
-export function todayString(now: Date = new Date()): string {
-  return format(now, 'yyyy-MM-dd');
-}
-
-/** The same calendar day as a `yyyy-MM-dd` string. */
-export function toDateString(date: Date): string {
-  return format(date, 'yyyy-MM-dd');
-}
-
-/** Midnight today as a real instant — used for "completed today" filters. */
-export function startOfTodayIso(now: Date = new Date()): string {
-  return startOfDay(now).toISOString();
-}
 
 /** A due date that has already passed (yesterday or earlier). */
 export function isOverdue(task: Task, now: Date = new Date()): boolean {

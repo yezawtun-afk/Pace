@@ -9,10 +9,10 @@ becomes that day's journal entry.
 Built for Android, iOS and web from a single Expo + React Native codebase, with data stored in
 Supabase so every device sees the same thing. Each account only ever sees its own rows.
 
-> **Status:** phase 3 of 9 is complete — the database with row-level security, accounts, onboarding,
-> a full task list (priorities, due dates, categories, four views, quick add) and a guest mode you
-> can try without signing up. Habits, the Today screen and the journal arrive next. See
-> [Roadmap](#roadmap).
+> **Status:** phase 4 of 9 is complete — the database with row-level security, accounts, onboarding,
+> a full task list (priorities, due dates, categories, four views, quick add), a guest mode you can
+> try without signing up, and habits with streaks, back-filling, completion rates and a month
+> heatmap. The Today screen and the journal arrive next. See [Roadmap](#roadmap).
 
 ## What it will do
 
@@ -152,18 +152,19 @@ same Wi-Fi network.
 | `npm run lint`                    | ESLint (includes Prettier rules)      |
 | `npm run lint:fix`                | Fix lint/format issues automatically  |
 | `npm run format`                  | Format the repo with Prettier         |
+| `npm test`                        | Jest: the pure habit logic            |
 | `npm run export:web`              | Produce a static web build in `dist/` |
 
 ## How tasks work
 
 Open **Tasks** in the nav. The screen has four views over the same table:
 
-| View         | Shows                                                            |
-| ------------ | ---------------------------------------------------------------- |
+| View         | Shows                                                             |
+| ------------ | ----------------------------------------------------------------- |
 | **Today**    | Tasks due today or earlier, plus anything you checked off today   |
 | **Upcoming** | Future due dates, grouped by day (Tomorrow, Friday, Fri 20 Nov …) |
-| **All**      | Every unfinished task, dated or not                              |
-| **Done**     | The 100 most recently completed tasks                            |
+| **All**      | Every unfinished task, dated or not                               |
+| **Done**     | The 100 most recently completed tasks                             |
 
 - **Quick add.** Type in the field above the list and press Enter. New tasks inherit a sensible
   date from the current view: today in Today, tomorrow in Upcoming, no date in All.
@@ -178,6 +179,39 @@ Open **Tasks** in the nav. The screen has four views over the same table:
 
 Tasks live in the `tasks` and `categories` tables. Both are protected by row-level security, so
 each account only ever reads and writes its own rows.
+
+## How habits work
+
+Open **Habits** in the nav. Each habit is one card: its emoji, name, schedule, current streak, its
+last seven days as small dots, its 30-day rate, and a check box for today.
+
+- **Three schedules.** _Every day_, _Chosen days_ (pick weekdays), or _Times per week_ (a target
+  from 1× to 7× that any day can satisfy).
+- **Checking off** is one tap and optimistic: the box flips immediately and rolls back if the save
+  fails. Un-checking deletes that day's row, so "done" is simply "a row exists".
+- **Rest days are forgiving.** A day you did not schedule never breaks a streak and is never
+  counted as missed. If you check in anyway, it counts.
+- **Today is never late.** A scheduled day that is still today can remain unchecked without
+  breaking the streak; the streak only resets once a scheduled day has ended unfinished.
+- **Streaks follow the schedule.** A weekly-target habit counts consecutive Monday→Sunday weeks
+  that reached the target, and the current week can still be finished.
+- **Tap a card** for the details: the streak in plain words, completion over the last 7 / 30 / 90
+  days, a month heatmap, and the last eight weeks as bars.
+- **Back-filling.** In the heatmap, tap any past day to check it in or clear it. Today and future
+  days are not tappable in the future, and the arrows move between months.
+- **Edit or delete** from the detail sheet. Deleting a habit also deletes its history (a database
+  cascade), so it asks once before doing it.
+
+Habits live in `habits` and `habit_logs`, both protected by row-level security. The app loads the
+last 180 days of logs in one query and computes streaks, rates and the heatmap on the device, so
+the UI reacts instantly without extra requests. Weeks run Monday to Sunday.
+
+The rules above are covered by Jest tests, because date and streak maths is exactly the kind of
+thing that breaks quietly:
+
+```powershell
+npm test
+```
 
 ## How guest mode works
 
@@ -208,9 +242,9 @@ src/
     ui/                 primitives: AppText, Card, Screen, Button, TextField, icons, …
     app-shell.tsx       bottom tabs on phones, sidebar on wide screens
   constants/            design tokens (theme.ts) + starter habits
-  features/             per-feature API calls, hooks and components (auth, onboarding, tasks)
+  features/             per-feature API calls, hooks and components (auth, onboarding, tasks, habits)
   hooks/                small reusable hooks
-  lib/                  Supabase client, query client, preferences, env, time helpers, theme hook
+  lib/                  Supabase client, query client, preferences, env, date/time helpers, theme
   types/                database types + env typings
 supabase/
   migrations/           the SQL you paste into the dashboard SQL Editor
@@ -235,7 +269,7 @@ supabase/
 - [x] **2. Database and auth** — migrations with RLS, sign-up/in/out, password reset, profiles,
       onboarding
 - [x] **3. Tasks** — CRUD, categories, priorities, due dates, views, quick add
-- [ ] **4. Habits** — CRUD, check-off, back-fill, streaks with tests, stats and heatmap
+- [x] **4. Habits** — CRUD, check-off, back-fill, streaks with tests, stats and heatmap
 - [ ] **5. Today** — combined habits + tasks, progress ring, overdue handling
 - [ ] **6. Journal and evening review** — guided review, prompts, mood, tags, history, search
 - [ ] **7. Reminders and settings** — notifications, preferences, export, account deletion

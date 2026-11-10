@@ -157,6 +157,17 @@ export function ChevronLeftIcon(props: IconProps) {
   );
 }
 
+/** Small flame used next to streaks. */
+export function FlameIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <Path d="M12 3.2c2.7 3 4.4 5.1 4.4 7.4a4.4 4.4 0 0 1-8.8 0c0-1.2.4-2.2 1.2-3.3.3 1 .9 1.7 1.7 2 .2-2.2.6-4 1.5-6.1Z" />
+      <Path d="M12 20.8c-2.9 0-5.2-1.9-5.2-4.6 0-1.6.8-3.1 2.2-4.6" />
+      <Path d="M12 20.8c2.9 0 5.2-1.9 5.2-4.6 0-1.6-.8-3.1-2.2-4.6" />
+    </SvgIcon>
+  );
+}
+
 export function CloseIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>

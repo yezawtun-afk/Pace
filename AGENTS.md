@@ -16,7 +16,7 @@ policies, indexes, updated_at triggers, `handle_new_user()` profile trigger,
 clearing, sign-up / sign-in / sign-out / password reset, three-step onboarding, route guards via
 `Stack.Protected`. Docs live in `supabase/README.md`.
 
-Next phases, in order: 4 habits → 5 Today screen → 6 journal + evening review →
+Next phases, in order: 5 Today screen → 6 journal + evening review →
 7 reminders/settings/export → 8 polish + realtime + offline queue → 9 release.
 
 Phase 3 (tasks) is done: `src/features/tasks/` (`keys.ts`, `grouping.ts` pure logic, `api.ts`,
@@ -25,6 +25,18 @@ new primitives `Chip`/`ChipRow`/`Dot`, `Checkbox`, `Sheet`, `ErrorState`; the ta
 Today / Upcoming / All / Done views. Categories are created and deleted inside the editor.
 Server-side filtering in `fetchTasks(view)`; sorting and grouping stay in `grouping.ts` so they
 can be unit-tested.
+
+Phase 4 (habits) is done: `src/features/habits/` (`schedule.ts` and `stats.ts` pure, `keys.ts`,
+`api.ts`, `queries.ts`, four components + the editor and detail sheets), `src/lib/dates.ts` shared
+day helpers (tasks now import from there), `src/constants/habits.ts`, and a `FlameIcon`. One log row
+per habit per day (`habit_logs`, unique `habit_id, log_date`); un-checking deletes it. The list
+loads the last `HISTORY_DAYS = 180` of logs once and computes streaks/rates/heatmap on the device.
+Streak rules live in `currentStreak()`: rest days are skipped, today unfinished never breaks a
+streak, a rest day that _was_ checked in counts, and weekly targets count Monday→Sunday weeks with
+the current week left open. Months are always six Monday-first rows (`monthWeeks`). Jest arrived
+with this phase: `jest.config.js` (`jest-expo` preset + `@/` mapper), `tsconfig` has
+`"types": ["jest"]`, tests in `src/features/habits/__tests__/`, and `npm test` runs 35 checks over
+the schedule and stats rules.
 
 Guest mode (anonymous sign-in) sits on top of phase 2: `signInAsGuest()` in
 `src/features/auth/api.ts`, `isGuest` on `useAuth()`, the **Continue as guest** button on the
@@ -74,7 +86,7 @@ src/app/            routes only, one file per screen, _layout.tsx per navigator
 src/components/     shared UI (ui/ holds primitives: text, card, screen, icons, …)
 src/components/app-shell.tsx   navigation chrome + NAV_ITEMS (single source of truth)
 src/features/       per-feature api.ts / keys.ts / hooks / components (auth, onboarding, …)
-src/lib/            supabase client, query client, preferences, env, time helpers, theme hook
+src/lib/            supabase client, query client, preferences, env, dates/time helpers, theme
 src/constants/      design tokens (theme.ts), static content (prompts, starter habits)
 src/hooks/          small reusable hooks
 src/types/          database.ts (must match the SQL) + local env types
@@ -111,6 +123,7 @@ npm run typecheck        # tsc --noEmit
 npm run lint             # expo lint (ESLint + Prettier rules)
 npm run lint:fix         # auto-fix what can be fixed
 npm run format           # prettier --write .
+npm test                 # jest (pure habit logic)
 npm run export:web       # static web build into dist/
 ```
 
