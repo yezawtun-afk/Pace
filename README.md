@@ -9,10 +9,11 @@ becomes that day's journal entry.
 Built for Android, iOS and web from a single Expo + React Native codebase, with data stored in
 Supabase so every device sees the same thing. Each account only ever sees its own rows.
 
-> **Status:** phase 4 of 9 is complete — the database with row-level security, accounts, onboarding,
+> **Status:** phase 5 of 9 is complete — the database with row-level security, accounts, onboarding,
 > a full task list (priorities, due dates, categories, four views, quick add), a guest mode you can
-> try without signing up, and habits with streaks, back-filling, completion rates and a month
-> heatmap. The Today screen and the journal arrive next. See [Roadmap](#roadmap).
+> try without signing up, habits with streaks, back-filling, completion rates and a month heatmap,
+> and a Today screen that pulls the two together behind one progress ring. The journal and the
+> evening review arrive next. See [Roadmap](#roadmap).
 
 ## What it will do
 
@@ -152,7 +153,7 @@ same Wi-Fi network.
 | `npm run lint`                    | ESLint (includes Prettier rules)      |
 | `npm run lint:fix`                | Fix lint/format issues automatically  |
 | `npm run format`                  | Format the repo with Prettier         |
-| `npm test`                        | Jest: the pure habit logic            |
+| `npm test`                        | Jest: the pure habit and Today logic  |
 | `npm run export:web`              | Produce a static web build in `dist/` |
 
 ## How tasks work
@@ -213,6 +214,31 @@ thing that breaks quietly:
 npm test
 ```
 
+## How Today works
+
+**Today** is the home screen and the reason the two lists exist in one app. It never stores
+anything of its own — it is a view over the habits and tasks you already have, so checking
+something off here checks it off everywhere.
+
+- **One ring, one number.** The ring counts everything on today's list: habits due today plus
+  tasks due today or overdue. It fills as you check things off, and the line beside it splits the
+  count into "Habits 1/3 · Tasks 0/2".
+- **Habits due today.** A daily habit and a weekly-target habit always appear; a chosen-days habit
+  only appears on its days. A rest day you checked in anyway still shows up, marked as a rest-day
+  check-in, because a real completion should never look like nothing.
+- **Tasks due today.** The same list as the Tasks screen's Today view: everything due today or
+  earlier, plus anything you finished today. The "Overdue" group appears only when something has
+  slipped, so a quiet day stays quiet.
+- **Quick add** at the top of the tasks section drops a task straight onto today.
+- **Tap a habit** to open the Habits tab with its full history; **tap a task** to open the same
+  editor sheet as everywhere else. The sheet mounts only while open.
+- **Nothing is nagging.** An empty day gets a small, calm card instead of a warning, and the
+  subtitle changes from "3 things left" to "Everything on your list is done" without celebrating
+  too loudly.
+
+The rules for "what belongs on today's list" live in `src/features/today/summary.ts` as pure
+functions, so `npm test` covers them alongside the habit maths.
+
 ## How guest mode works
 
 **Continue as guest** on the sign-in screen creates an anonymous Supabase account: a real user row
@@ -242,7 +268,7 @@ src/
     ui/                 primitives: AppText, Card, Screen, Button, TextField, icons, …
     app-shell.tsx       bottom tabs on phones, sidebar on wide screens
   constants/            design tokens (theme.ts) + starter habits
-  features/             per-feature API calls, hooks and components (auth, onboarding, tasks, habits)
+  features/             per-feature API calls, hooks and components (auth, onboarding, tasks, habits, today)
   hooks/                small reusable hooks
   lib/                  Supabase client, query client, preferences, env, date/time helpers, theme
   types/                database types + env typings
@@ -270,7 +296,7 @@ supabase/
       onboarding
 - [x] **3. Tasks** — CRUD, categories, priorities, due dates, views, quick add
 - [x] **4. Habits** — CRUD, check-off, back-fill, streaks with tests, stats and heatmap
-- [ ] **5. Today** — combined habits + tasks, progress ring, overdue handling
+- [x] **5. Today** — combined habits + tasks, progress ring, overdue handling
 - [ ] **6. Journal and evening review** — guided review, prompts, mood, tags, history, search
 - [ ] **7. Reminders and settings** — notifications, preferences, export, account deletion
 - [ ] **8. Polish and sync** — realtime, offline queue, animations, accessibility, web layout

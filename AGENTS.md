@@ -16,8 +16,8 @@ policies, indexes, updated_at triggers, `handle_new_user()` profile trigger,
 clearing, sign-up / sign-in / sign-out / password reset, three-step onboarding, route guards via
 `Stack.Protected`. Docs live in `supabase/README.md`.
 
-Next phases, in order: 5 Today screen → 6 journal + evening review →
-7 reminders/settings/export → 8 polish + realtime + offline queue → 9 release.
+Next phases, in order: 6 journal + evening review → 7 reminders/settings/export →
+8 polish + realtime + offline queue → 9 release.
 
 Phase 3 (tasks) is done: `src/features/tasks/` (`keys.ts`, `grouping.ts` pure logic, `api.ts`,
 `queries.ts`), `TaskRow`, `DateField` (presets + month calendar), `QuickAdd`, `TaskEditor` sheet,
@@ -37,6 +37,16 @@ the current week left open. Months are always six Monday-first rows (`monthWeeks
 with this phase: `jest.config.js` (`jest-expo` preset + `@/` mapper), `tsconfig` has
 `"types": ["jest"]`, tests in `src/features/habits/__tests__/`, and `npm test` runs 35 checks over
 the schedule and stats rules.
+
+Phase 5 (Today) is done: `src/features/today/` (`summary.ts` pure, one component,
+`__tests__/summary.test.ts`) and a rewritten `src/app/(app)/today.tsx`. Today is a read-only view
+over the existing tables — no new schema. `habitsForToday()` keeps scheduled habits plus any
+rest-day check-in, `todayProgress()` folds both lists into the ring's numbers, and `greetingName()`
+drops "Guest" so the header never reads like a form letter. The screen uses `useProfile`,
+`useHabits`, `useHabitLogs`, `useTasks('today')`, `useCategories`, `useToggleHabitDay` and
+`useSetTaskCompleted`; `TaskEditor` mounts only while a row is open. Sections fail and retry
+independently, and an empty day gets a small `QuietNote` card rather than a big empty state.
+`npm test` is now 48 checks.
 
 Guest mode (anonymous sign-in) sits on top of phase 2: `signInAsGuest()` in
 `src/features/auth/api.ts`, `isGuest` on `useAuth()`, the **Continue as guest** button on the
