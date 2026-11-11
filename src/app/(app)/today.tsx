@@ -166,15 +166,13 @@ export default function TodayScreen() {
 
           <View style={{ flex: 1, gap: Space.xs + 2 }}>
             <AppText variant="bodyStrong">
-              {summaryLoading
-                ? 'Getting today ready'
-                : headlineFor(progress.remaining, progress.total)}
+              {summaryLoading ? 'Loading' : headlineFor(progress.remaining, progress.total)}
             </AppText>
             <AppText variant="small" tone="secondary">
               {summaryLoading
-                ? 'Your habits and tasks are on the way.'
+                ? 'Loading…'
                 : progress.total === 0
-                  ? 'A habit or a task is all it takes to start.'
+                  ? 'Add a habit or task to begin.'
                   : countsFor(progress)}
             </AppText>
           </View>
@@ -201,8 +199,8 @@ export default function TodayScreen() {
             title={(habitsQuery.data ?? []).length === 0 ? 'No habits yet' : 'Nothing due today'}
             message={
               (habitsQuery.data ?? []).length === 0
-                ? 'Add a small practice in the Habits tab and it will wait for you here on the days it is due.'
-                : 'Rest days are part of the practice. Anything you do today will still show up here.'
+                ? 'Add one in the Habits tab.'
+                : 'Rest days are part of the practice.'
             }
           />
         ) : (
@@ -292,17 +290,17 @@ export default function TodayScreen() {
 
 /** The line under the greeting. Always true, never scolding. */
 function subtitleFor(remaining: number, total: number): string {
-  if (total === 0) return 'Everything for today, in one calm place.';
-  if (remaining === 0) return 'Everything on your list is done. Enjoy the quiet.';
-  if (remaining === 1) return 'One thing left for today.';
-  return `${remaining} things left for today.`;
+  if (total === 0) return 'Nothing scheduled today.';
+  if (remaining === 0) return 'All done.';
+  if (remaining === 1) return '1 left today.';
+  return `${remaining} left today.`;
 }
 
 /** The headline next to the ring. */
 function headlineFor(remaining: number, total: number): string {
-  if (total === 0) return 'Nothing scheduled yet';
-  if (remaining === 0) return 'All done for today';
-  return `${remaining} left today`;
+  if (total === 0) return 'Nothing scheduled';
+  if (remaining === 0) return 'All done';
+  return `${remaining} left`;
 }
 
 /** "Habits 1/3 · Tasks 0/2", skipping a list with nothing in it. */

@@ -16,6 +16,8 @@ type TextFieldProps = Omit<TextInputProps, 'style'> & {
   secure?: boolean;
   /** Taller box for long writing; multiline fields default to 96. */
   minHeight?: number;
+  /** Optional font family for the input text (e.g. a serif for journaling). */
+  fontFamily?: string;
 };
 
 /**
@@ -28,6 +30,7 @@ export function TextField({
   hint,
   secure = false,
   minHeight,
+  fontFamily,
   ...inputProps
 }: TextFieldProps) {
   const { colors } = useTheme();
@@ -70,7 +73,7 @@ export function TextField({
             paddingTop: isMultiline ? Space.md : Space.sm,
             paddingBottom: Space.sm,
             color: colors.text,
-            fontFamily: FontFamily,
+            fontFamily: fontFamily ?? FontFamily,
             fontSize: 16,
             textAlignVertical: isMultiline ? 'top' : 'auto',
           }}

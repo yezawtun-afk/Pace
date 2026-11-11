@@ -5,7 +5,7 @@
  * radius. Two palettes (light/dark) share the same keys, which lets the theme
  * hook hand back a single typed object.
  *
- * The accent is a soft sage green. `accent` is the version that is readable on
+ * The accent is a warm terracotta. `accent` is the version that is readable on
  * the app background (contrast >= 4.5:1), `accentSoft` is the tinted surface
  * used for active states and highlights.
  */
@@ -19,57 +19,57 @@ import '@/global.css';
 export type ColorSchemeName = 'light' | 'dark';
 
 const light = {
-  background: '#FBFBF8',
+  background: '#FBF8F4',
   surface: '#FFFFFF',
-  surfaceMuted: '#F3F3EE',
-  surfaceSunken: '#EFEFE9',
-  border: '#E7E7DF',
-  borderStrong: '#D3D3C9',
-  text: '#1D1D1A',
-  textSecondary: '#5F5F58',
-  textTertiary: '#7C7C73',
-  accent: '#52704F',
+  surfaceMuted: '#F4F0EA',
+  surfaceSunken: '#EDE8E0',
+  border: '#E8E2D8',
+  borderStrong: '#D8D0C2',
+  text: '#1C1917',
+  textSecondary: '#57534E',
+  textTertiary: '#78716C',
+  accent: '#D9593D',
   accentText: '#FFFFFF',
-  accentSoft: '#E9F0E6',
-  accentBorder: '#C8D8C2',
-  danger: '#B3382F',
-  dangerSoft: '#FBEDEB',
-  warning: '#9A5B0B',
+  accentSoft: '#FBE9E4',
+  accentBorder: '#F0C4B8',
+  danger: '#C0392B',
+  dangerSoft: '#FDECEA',
+  warning: '#B45309',
   priority: {
-    1: '#D1453B',
-    2: '#EB8909',
-    3: '#2F6FE0',
-    4: '#8F8F86',
+    1: '#D9593D',
+    2: '#E8833A',
+    3: '#3B82F6',
+    4: '#A8A29E',
   },
-  overlay: 'rgba(24, 24, 21, 0.4)',
+  overlay: 'rgba(28, 25, 23, 0.4)',
   knob: '#FFFFFF',
 } as const;
 
 const dark = {
-  background: '#121211',
-  surface: '#1A1A18',
-  surfaceMuted: '#222220',
-  surfaceSunken: '#171715',
-  border: '#2C2C28',
-  borderStrong: '#3E3E38',
-  text: '#ECECE5',
-  textSecondary: '#A8A89F',
-  textTertiary: '#83837A',
-  accent: '#A2C099',
-  accentText: '#14180F',
-  accentSoft: '#212A1F',
-  accentBorder: '#374633',
-  danger: '#E88A80',
-  dangerSoft: '#2A1B19',
+  background: '#1C1917',
+  surface: '#262320',
+  surfaceMuted: '#2F2B27',
+  surfaceSunken: '#171412',
+  border: '#3A3530',
+  borderStrong: '#4A443E',
+  text: '#F5F1EA',
+  textSecondary: '#C4BDB3',
+  textTertiary: '#9C958A',
+  accent: '#E87A5F',
+  accentText: '#1C1917',
+  accentSoft: '#3A2620',
+  accentBorder: '#5A3A32',
+  danger: '#F08A80',
+  dangerSoft: '#3A201E',
   warning: '#E8B173',
   priority: {
-    1: '#E86A5F',
+    1: '#E87A5F',
     2: '#EFA13C',
     3: '#6D9DF0',
-    4: '#8F8F86',
+    4: '#9C958A',
   },
   overlay: 'rgba(0, 0, 0, 0.6)',
-  knob: '#ECECE5',
+  knob: '#F5F1EA',
 } as const;
 
 export const Colors = { light, dark };
@@ -83,18 +83,18 @@ export const Space = {
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 20,
-  xxl: 28,
-  xxxl: 40,
-  huge: 56,
+  xl: 24,
+  xxl: 32,
+  xxxl: 48,
+  huge: 64,
 } as const;
 
 /** Corner radii. */
 export const Radius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 22,
+  sm: 6,
+  md: 10,
+  lg: 12,
+  xl: 16,
   pill: 999,
 } as const;
 
@@ -115,6 +115,12 @@ export const FontFamily = Platform.select({
   default: undefined,
 });
 
+/** Serif stack for journal body and large page titles (personality font). */
+export const FontSerif = Platform.select({
+  web: '"Lora", "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif',
+  default: 'Lora_400Regular',
+});
+
 /** Monospace stack for code snippets (setup instructions). */
 export const MonoFamily = Platform.select({
   web: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
@@ -127,14 +133,14 @@ export const MonoFamily = Platform.select({
  * heading, body, small and caption. Letter spacing tightens as size grows.
  */
 export const Type = {
-  display: { fontSize: 32, lineHeight: 38, fontWeight: '700', letterSpacing: -0.9 },
-  title: { fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -0.5 },
-  heading: { fontSize: 18, lineHeight: 25, fontWeight: '600', letterSpacing: -0.2 },
-  body: { fontSize: 16, lineHeight: 25, fontWeight: '400', letterSpacing: -0.1 },
-  bodyStrong: { fontSize: 16, lineHeight: 25, fontWeight: '600', letterSpacing: -0.1 },
-  small: { fontSize: 14, lineHeight: 21, fontWeight: '400' },
-  smallStrong: { fontSize: 14, lineHeight: 21, fontWeight: '600' },
-  caption: { fontSize: 12, lineHeight: 17, fontWeight: '500' },
+  display: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.6 },
+  title: { fontSize: 20, lineHeight: 26, fontWeight: '700', letterSpacing: -0.3 },
+  heading: { fontSize: 16, lineHeight: 22, fontWeight: '600', letterSpacing: -0.1 },
+  body: { fontSize: 16, lineHeight: 24, fontWeight: '400', letterSpacing: 0 },
+  bodyStrong: { fontSize: 16, lineHeight: 24, fontWeight: '600', letterSpacing: 0 },
+  small: { fontSize: 14, lineHeight: 20, fontWeight: '400', letterSpacing: 0 },
+  smallStrong: { fontSize: 14, lineHeight: 20, fontWeight: '600', letterSpacing: 0 },
+  caption: { fontSize: 12, lineHeight: 16, fontWeight: '500', letterSpacing: 0 },
   overline: {
     fontSize: 11,
     lineHeight: 16,

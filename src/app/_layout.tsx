@@ -2,6 +2,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -26,6 +28,11 @@ SplashScreen.setOptions({ duration: 250, fade: true });
 const HYDRATION_TIMEOUT_MS = 600;
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Lora_400Regular,
+    Lora_600SemiBold,
+    Lora_700Bold,
+  });
   const hasHydrated = usePreferences((state) => state.hasHydrated);
 
   useEffect(() => {
@@ -37,7 +44,7 @@ export default function RootLayout() {
     return () => clearTimeout(timer);
   }, []);
 
-  if (!hasHydrated) {
+  if (!hasHydrated || !fontsLoaded) {
     return null;
   }
 

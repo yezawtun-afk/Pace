@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 
 import { Card } from '@/components/ui/card';
 import { AppText } from '@/components/ui/text';
-import { Radius, Space } from '@/constants/theme';
+import { FontSerif, Radius, Space } from '@/constants/theme';
 import { useTheme } from '@/lib/use-theme';
 import type { JournalEntry } from '@/types/database';
 
@@ -56,13 +56,17 @@ export function EntryCard({ entry, tagNames, onOpen }: EntryCardProps) {
         </View>
 
         {entry.title ? (
-          <AppText variant="bodyStrong" numberOfLines={2}>
+          <AppText variant="bodyStrong" numberOfLines={2} style={{ fontFamily: FontSerif }}>
             {entry.title}
           </AppText>
         ) : null}
 
         {preview ? (
-          <AppText variant="small" tone="secondary" numberOfLines={3}>
+          <AppText
+            variant="small"
+            tone="secondary"
+            numberOfLines={3}
+            style={{ fontFamily: FontSerif }}>
             {preview}
           </AppText>
         ) : (

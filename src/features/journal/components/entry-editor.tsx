@@ -8,7 +8,7 @@ import { Sheet } from '@/components/ui/sheet';
 import { TextField } from '@/components/ui/text-field';
 import { AppText } from '@/components/ui/text';
 import { JOURNAL_PROMPTS } from '@/constants/prompts';
-import { Radius, Space } from '@/constants/theme';
+import { FontSerif, Radius, Space } from '@/constants/theme';
 import { friendlyDataError } from '@/features/auth/errors';
 import { fromDateString } from '@/lib/dates';
 import { useTheme } from '@/lib/use-theme';
@@ -268,7 +268,9 @@ export function EntryEditor({
           <TextLink label="Another" onPress={anotherPrompt} align="right" />
         </View>
 
-        <AppText variant="body">{draft.promptText}</AppText>
+        <AppText variant="body" style={{ fontFamily: FontSerif }}>
+          {draft.promptText}
+        </AppText>
       </View>
 
       <TextField
@@ -288,6 +290,7 @@ export function EntryEditor({
         multiline
         minHeight={150}
         maxLength={8000}
+        fontFamily={FontSerif}
       />
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.sm }}>

@@ -184,9 +184,9 @@ function BottomTabs() {
             })}>
             <View
               style={{
-                width: 46,
-                height: 26,
-                borderRadius: Radius.sm,
+                width: 40,
+                height: 28,
+                borderRadius: Radius.pill,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: active ? colors.accentSoft : 'transparent',
