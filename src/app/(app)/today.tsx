@@ -1,14 +1,16 @@
 import { format } from 'date-fns';
 import { router } from 'expo-router';
-import { useMemo, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, RefreshControl, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { TextLink } from '@/components/ui/button';
+import { Button, TextLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { HabitsIcon, MoonIcon, TasksIcon } from '@/components/ui/icons';
-import { ReminderBanner } from '@/components/reminder-banner';
-import { ProgressRing } from '@/components/ui/progress-ring';
+import { HabitsIcon, MoonIcon, PlusIcon } from '@/components/ui/icons';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Screen, ScreenHeader } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { AppText } from '@/components/ui/text';
@@ -22,21 +24,16 @@ import { groupTasks, todayString } from '@/features/tasks/grouping';
 import { useCategories, useSetTaskCompleted, useTasks } from '@/features/tasks/queries';
 import { TodayHabitRow } from '@/features/today/components/today-habit-row';
 import { greetingFor, greetingName, habitsForToday, todayProgress } from '@/features/today/summary';
+import { ReminderBanner } from '@/components/reminder-banner';
+import { Sheet } from '@/components/ui/sheet';
 import { useTheme } from '@/lib/use-theme';
 import type { Category, Task } from '@/types/database';
 
-/** Shared so habits without a log this month do not allocate a new Set each render. */
-const NO_LOGS: Set<string> = new Set();
+const NO_LOGS = new Set<string>();
 
-/**
- * The home screen: habits due today, tasks due or overdue, and one progress
- * ring that answers "how is today going?" without reading a single number.
- *
- * Nothing here is stored separately — Today is a view over the habits and tasks
- * you already have, so checking something off here checks it off everywhere.
- */
 export default function TodayScreen() {
   const { colors } = useTheme();
+  const today = useMemo(() => new Date(), []);
 
   const profileQuery = useProfile();
   const habitsQuery = useHabits();
@@ -45,15 +42,15 @@ export default function TodayScreen() {
   const categoriesQuery = useCategories();
 
   const toggleHabitDay = useToggleHabitDay();
-  const setCompleted = useSetTaskCompleted();
+  const setTaskCompleted = useSetTaskCompleted();
 
-  /** The task sheet, if one is open. Sheets mount only while open. */
-  const [editor, setEditor] = useState<{ task: Task } | null>(null);
+  const name = greetingName(profileQuery.data?.display_name ?? null);
+  const greeting = greetingFor(today);
 
-  const today = new Date();
-  const todayKey = todayString(today);
+  const habitsLoading = habitsQuery.isPending || logsQuery.isPending;
+  const tasksLoading = tasksQuery.isPending;
+  const summaryLoading = habitsLoading || tasksLoading;
 
-  /** Logs arrive flat, so group them once per fetch instead of per row. */
   const doneByHabit = useMemo(() => {
     const map = new Map<string, Set<string>>();
 
@@ -69,37 +66,46 @@ export default function TodayScreen() {
     return map;
   }, [logsQuery.data]);
 
-  const categoriesById = useMemo(() => {
-    const map = new Map<string, Category>();
-    for (const category of categoriesQuery.data ?? []) {
-      map.set(category.id, category);
-    }
-    return map;
-  }, [categoriesQuery.data]);
+  const habitRows = useMemo(
+    () => (habitsLoading ? [] : habitsForToday(habitsQuery.data ?? [], doneByHabit, today)),
+    [habitsLoading, habitsQuery.data, doneByHabit, today],
+  );
 
-  const habitRows = habitsForToday(habitsQuery.data ?? [], doneByHabit, today);
-  const tasks = tasksQuery.data ?? [];
-  const groups = groupTasks('today', tasks, today);
-  const progress = todayProgress(habitRows, tasks);
+  const taskRows = groupTasks('today', tasksQuery.data ?? [], today).flatMap(
+    (group) => group.tasks,
+  );
 
-  const name = greetingName(profileQuery.data?.display_name);
-  const greeting = greetingFor(today);
+  const progress = todayProgress(habitRows, taskRows);
 
-  const habitsLoading = habitsQuery.isPending || logsQuery.isPending;
-  const habitsFailed = habitsQuery.isError || logsQuery.isError;
-
-  /**
-   * Until both lists have arrived the counts are only half true, so the summary
-   * card says "loading" instead of briefly claiming the day is finished.
-   */
-  const summaryLoading = habitsLoading || tasksQuery.isPending;
-
-  function refresh() {
+  const refresh = () => {
     void habitsQuery.refetch();
     void logsQuery.refetch();
     void tasksQuery.refetch();
     void categoriesQuery.refetch();
+  };
+
+  const categoriesById = useMemo(() => {
+    const map = new Map<string, Category>();
+    for (const category of categoriesQuery.data ?? []) map.set(category.id, category);
+    return map;
+  }, [categoriesQuery.data]);
+
+  const [editorTask, setEditorTask] = useState<Task | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+
+  function openEditor(task: Task) {
+    setEditorTask(task);
+    setEditorOpen(true);
   }
+
+  function closeEditor() {
+    setEditorOpen(false);
+    setEditorTask(null);
+  }
+
+  const nothingScheduled = progress.total === 0 && !summaryLoading;
+  const allDone = progress.total > 0 && progress.remaining === 0 && !summaryLoading;
 
   return (
     <Screen
@@ -113,12 +119,7 @@ export default function TodayScreen() {
       }>
       <ScreenHeader
         eyebrow={format(today, 'EEEE d MMMM')}
-        title={name ? `${greeting}, ${name}` : greeting}
-        subtitle={
-          summaryLoading
-            ? 'Everything for today, in one calm place.'
-            : subtitleFor(progress.remaining, progress.total)
-        }
+        title={name ? `Good ${greeting}, ${name}` : `Good ${greeting}`}
         action={
           <Pressable
             onPress={() => router.push('/journal/review')}
@@ -146,210 +147,201 @@ export default function TodayScreen() {
         <ReminderBanner onOpen={() => router.push('/journal/review')} />
       </View>
 
-      <Card>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.xl }}>
-          <ProgressRing
-            value={summaryLoading ? 0 : progress.ratio}
-            size={88}
-            accessibilityLabel={
-              summaryLoading
-                ? 'Loading today'
-                : `${progress.done} of ${progress.total} items completed today`
-            }>
-            <AppText variant="heading">
-              {summaryLoading ? '—' : `${progress.done}/${progress.total}`}
+      {summaryLoading ? (
+        <View style={{ gap: Space.md, marginBottom: Space.lg }}>
+          <Skeleton height={12} width="40%" />
+          <Skeleton height={8} />
+        </View>
+      ) : progress.total > 0 ? (
+        <View style={{ marginBottom: Space.lg, gap: Space.xs + 2 }}>
+          <View
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <AppText variant="smallStrong">
+              {progress.done} of {progress.total} done
             </AppText>
-            <AppText variant="caption" tone="tertiary">
-              done
-            </AppText>
-          </ProgressRing>
-
-          <View style={{ flex: 1, gap: Space.xs + 2 }}>
-            <AppText variant="bodyStrong">
-              {summaryLoading ? 'Loading' : headlineFor(progress.remaining, progress.total)}
-            </AppText>
-            <AppText variant="small" tone="secondary">
-              {summaryLoading
-                ? 'Loading…'
-                : progress.total === 0
-                  ? 'Add a habit or task to begin.'
-                  : countsFor(progress)}
-            </AppText>
+            {allDone ? (
+              <Animated.View entering={FadeIn.duration(300)}>
+                <AppText variant="small" tone="accent">
+                  All done for today.
+                </AppText>
+              </Animated.View>
+            ) : null}
+          </View>
+          <View
+            style={{
+              height: 6,
+              borderRadius: Radius.pill,
+              backgroundColor: colors.surfaceMuted,
+              overflow: 'hidden',
+            }}>
+            <View
+              style={{
+                height: '100%',
+                width: `${Math.round(progress.ratio * 100)}%`,
+                backgroundColor: colors.accent,
+                borderRadius: Radius.pill,
+              }}
+            />
           </View>
         </View>
-      </Card>
+      ) : null}
 
-      <View style={{ marginTop: Space.xxxl }}>
-        <SectionHeader
-          title="Habits"
-          count={habitsLoading ? undefined : habitRows.length}
-          action={<TextLink label="All habits" onPress={() => router.navigate('/habits')} />}
-        />
-
-        {habitsLoading ? (
-          <Loading />
-        ) : habitsFailed ? (
-          <ErrorState
-            message="Your habits could not be loaded. This is usually a connection problem."
-            onRetry={refresh}
-          />
-        ) : habitRows.length === 0 ? (
-          <QuietNote
-            icon={<HabitsIcon size={18} color={colors.textTertiary} />}
-            title={(habitsQuery.data ?? []).length === 0 ? 'No habits yet' : 'Nothing due today'}
-            message={
-              (habitsQuery.data ?? []).length === 0
-                ? 'Add one in the Habits tab.'
-                : 'Rest days are part of the practice.'
-            }
-          />
-        ) : (
-          <Card padded={false}>
-            {habitRows.map((entry, index) => (
-              <TodayHabitRow
-                key={entry.habit.id}
-                entry={entry}
-                done={doneByHabit.get(entry.habit.id) ?? NO_LOGS}
-                today={today}
-                last={index === habitRows.length - 1}
-                onToggle={() =>
-                  toggleHabitDay.mutate({
-                    habitId: entry.habit.id,
-                    date: todayKey,
-                    done: !entry.done,
-                  })
-                }
-                onOpen={() => router.navigate('/habits')}
+      {nothingScheduled && habitRows.length === 0 && taskRows.length === 0 ? (
+        <EmptyState
+          icon={<HabitsIcon size={20} color={colors.textTertiary} />}
+          title="Nothing scheduled today"
+          message="Add a habit or a task to get started."
+          action={
+            <View style={{ flexDirection: 'row', gap: Space.sm }}>
+              <Button
+                label="Add a habit"
+                onPress={() => router.navigate('/habits')}
+                fullWidth={false}
               />
-            ))}
-          </Card>
-        )}
-      </View>
-
-      <View style={{ marginTop: Space.xxl }}>
-        <SectionHeader
-          title="Tasks"
-          count={tasksQuery.isPending ? undefined : tasks.length}
-          action={<TextLink label="All tasks" onPress={() => router.navigate('/tasks')} />}
-        />
-
-        <QuickAdd placeholder="Add a task for today" dueDate={todayKey} />
-
-        {tasksQuery.isPending ? (
-          <Loading />
-        ) : tasksQuery.isError ? (
-          <ErrorState
-            message="Your tasks could not be loaded. This is usually a connection problem."
-            onRetry={refresh}
-          />
-        ) : groups.length === 0 ? (
-          <QuietNote
-            icon={<TasksIcon size={18} color={colors.textTertiary} />}
-            title="Nothing due today"
-            message="Tasks due today — and anything overdue — will wait here. Completing one takes a single tap."
-          />
-        ) : (
-          groups.map((group) => (
-            <View key={group.key} style={{ marginTop: Space.lg }}>
-              <SectionHeader
-                title={group.title}
-                count={group.tasks.length}
-                style={{ marginBottom: Space.sm }}
+              <Button
+                label="Add a task"
+                variant="secondary"
+                onPress={() => setQuickAddOpen(true)}
+                fullWidth={false}
               />
+            </View>
+          }
+        />
+      ) : (
+        <>
+          <View style={{ marginTop: Space.lg }}>
+            <SectionHeader
+              title="Habits"
+              count={habitsLoading ? undefined : habitRows.length}
+              action={<TextLink label="Add" onPress={() => router.navigate('/habits')} />}
+            />
 
+            {habitsLoading ? (
+              <View style={{ gap: Space.sm }}>
+                <Skeleton height={52} />
+                <Skeleton height={52} />
+              </View>
+            ) : habitsQuery.isError || logsQuery.isError ? (
+              <ErrorState
+                message="Your habits could not be loaded."
+                onRetry={() => {
+                  void habitsQuery.refetch();
+                  void logsQuery.refetch();
+                }}
+              />
+            ) : habitRows.length === 0 ? (
+              <AppText variant="small" tone="tertiary" style={{ paddingVertical: Space.sm }}>
+                No habits due today.
+              </AppText>
+            ) : (
               <Card padded={false}>
-                {group.tasks.map((task, index) => (
+                {habitRows.map((entry, index) => (
+                  <TodayHabitRow
+                    key={entry.habit.id}
+                    entry={entry}
+                    done={doneByHabit.get(entry.habit.id) ?? NO_LOGS}
+                    today={today}
+                    last={index === habitRows.length - 1}
+                    onToggle={() => {
+                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      toggleHabitDay.mutate({
+                        habitId: entry.habit.id,
+                        date: todayString(today),
+                        done: !entry.done,
+                      });
+                    }}
+                    onOpen={() => router.navigate('/habits')}
+                  />
+                ))}
+              </Card>
+            )}
+          </View>
+
+          <View style={{ marginTop: Space.xl }}>
+            <SectionHeader
+              title="Tasks"
+              count={tasksLoading ? undefined : taskRows.length}
+              action={<TextLink label="All" onPress={() => router.navigate('/tasks')} />}
+            />
+
+            {tasksLoading ? (
+              <View style={{ gap: Space.sm }}>
+                <Skeleton height={44} />
+                <Skeleton height={44} />
+              </View>
+            ) : tasksQuery.isError ? (
+              <ErrorState
+                message="Your tasks could not be loaded."
+                onRetry={() => void tasksQuery.refetch()}
+              />
+            ) : taskRows.length === 0 ? (
+              <AppText variant="small" tone="tertiary" style={{ paddingVertical: Space.sm }}>
+                No tasks due today.
+              </AppText>
+            ) : (
+              <Card padded={false}>
+                {taskRows.map((task, index) => (
                   <TaskRow
                     key={task.id}
                     task={task}
                     category={task.category_id ? categoriesById.get(task.category_id) : undefined}
-                    last={index === group.tasks.length - 1}
-                    onToggle={() =>
-                      setCompleted.mutate({ taskId: task.id, completed: !task.completed })
-                    }
-                    onOpen={() => setEditor({ task })}
+                    onToggle={() => {
+                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setTaskCompleted.mutate({
+                        taskId: task.id,
+                        completed: !task.completed,
+                      });
+                    }}
+                    onOpen={() => openEditor(task)}
+                    last={index === taskRows.length - 1}
                   />
                 ))}
               </Card>
-            </View>
-          ))
-        )}
-      </View>
+            )}
+          </View>
+        </>
+      )}
 
-      {editor ? (
+      {editorOpen && editorTask ? (
         <TaskEditor
           visible
-          task={editor.task}
-          defaultDate={editor.task.due_date ?? todayKey}
-          onClose={() => setEditor(null)}
+          task={editorTask}
+          defaultDate={editorTask.due_date ?? todayString(today)}
+          onClose={closeEditor}
         />
       ) : null}
+
+      <Sheet
+        visible={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        title="Add a task"
+        subtitle="Quick entry">
+        <QuickAdd placeholder="What needs doing?" dueDate={todayString(today)} />
+      </Sheet>
+
+      <Pressable
+        onPress={() => setQuickAddOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Add a task"
+        style={({ pressed }) => ({
+          position: 'absolute',
+          right: Space.lg,
+          bottom: Space.lg,
+          width: 56,
+          height: 56,
+          borderRadius: Radius.pill,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.accent,
+          shadowColor: '#000',
+          shadowOpacity: 0.2,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 4,
+          opacity: pressed ? 0.8 : 1,
+        })}>
+        <PlusIcon size={24} color={colors.accentText} />
+      </Pressable>
     </Screen>
-  );
-}
-
-/** The line under the greeting. Always true, never scolding. */
-function subtitleFor(remaining: number, total: number): string {
-  if (total === 0) return 'Nothing scheduled today.';
-  if (remaining === 0) return 'All done.';
-  if (remaining === 1) return '1 left today.';
-  return `${remaining} left today.`;
-}
-
-/** The headline next to the ring. */
-function headlineFor(remaining: number, total: number): string {
-  if (total === 0) return 'Nothing scheduled';
-  if (remaining === 0) return 'All done';
-  return `${remaining} left`;
-}
-
-/** "Habits 1/3 · Tasks 0/2", skipping a list with nothing in it. */
-function countsFor(progress: ReturnType<typeof todayProgress>): string {
-  const parts: string[] = [];
-
-  if (progress.habitTotal > 0) {
-    parts.push(`Habits ${progress.habitDone}/${progress.habitTotal}`);
-  }
-  if (progress.taskTotal > 0) {
-    parts.push(`Tasks ${progress.taskDone}/${progress.taskTotal}`);
-  }
-
-  return parts.join(' · ');
-}
-
-/** Centered spinner for one section while its first fetch is in flight. */
-function Loading() {
-  const { colors } = useTheme();
-
-  return (
-    <View style={{ paddingVertical: Space.xxl, alignItems: 'center' }}>
-      <ActivityIndicator color={colors.accent} />
-    </View>
-  );
-}
-
-type QuietNoteProps = {
-  icon: ReactNode;
-  title: string;
-  message: string;
-};
-
-/**
- * A small, calm "nothing here today" card. The full EmptyState is saved for
- * screens that are entirely empty, so a quiet day does not look like an error.
- */
-function QuietNote({ icon, title, message }: QuietNoteProps) {
-  return (
-    <Card>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.md }}>
-        {icon}
-        <View style={{ flex: 1, gap: 2 }}>
-          <AppText variant="bodyStrong">{title}</AppText>
-          <AppText variant="small" tone="secondary">
-            {message}
-          </AppText>
-        </View>
-      </View>
-    </Card>
   );
 }
