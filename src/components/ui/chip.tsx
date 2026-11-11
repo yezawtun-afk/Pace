@@ -37,6 +37,7 @@ export function Chip({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected, disabled }}
+      aria-pressed={selected}
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',

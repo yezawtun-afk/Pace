@@ -27,6 +27,7 @@ export function Checkbox({ checked, onPress, label, disabled = false }: Checkbox
       accessibilityRole="checkbox"
       accessibilityLabel={label}
       accessibilityState={{ checked, disabled }}
+      aria-checked={checked}
       hitSlop={4}
       style={({ pressed }) => ({
         width: Layout.minTapTarget,

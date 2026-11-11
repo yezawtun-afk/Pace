@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/icons';
 import { AppText } from '@/components/ui/text';
 import { Layout, Radius, Space } from '@/constants/theme';
+import { OfflineBanner } from '@/components/offline-banner';
 import { useIsWide } from '@/hooks/use-is-wide';
 import { useTheme } from '@/lib/use-theme';
 
@@ -54,7 +55,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ flex: 1, flexDirection: isWide ? 'row' : 'column' }}>
         {isWide ? <Sidebar /> : null}
-        <View style={{ flex: 1 }}>{children}</View>
+        <View style={{ flex: 1 }}>
+          <OfflineBanner />
+          {children}
+        </View>
         {isWide ? null : <BottomTabs />}
       </View>
     </View>
@@ -106,6 +110,7 @@ function Sidebar() {
               onPress={() => goTo(item.href)}
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
+              aria-selected={active}
               accessibilityLabel={item.label}
               style={({ pressed }) => ({
                 flexDirection: 'row',
@@ -168,6 +173,7 @@ function BottomTabs() {
             onPress={() => goTo(item.href)}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
+            aria-selected={active}
             accessibilityLabel={item.label}
             style={({ pressed }) => ({
               flex: 1,

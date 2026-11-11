@@ -50,8 +50,9 @@ export function SegmentedControl<T extends string>({
           <Pressable
             key={option.value}
             onPress={() => onChange(option.value)}
-            accessibilityRole="button"
+            accessibilityRole="radio"
             accessibilityState={{ selected }}
+            aria-checked={selected}
             style={({ pressed }) => [
               {
                 flexDirection: 'row',

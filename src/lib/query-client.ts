@@ -20,7 +20,11 @@ export const queryClient = new QueryClient({
       refetchOnReconnect: true,
     },
     mutations: {
-      retry: 0,
+      // Queue mutations while offline and replay them when the connection
+      // comes back, so a dropped network never loses a check-off or a save.
+      networkMode: 'offlineFirst',
+      retry: 2,
+      retryDelay: 1000,
     },
   },
 });

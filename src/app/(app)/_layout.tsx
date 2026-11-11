@@ -4,6 +4,7 @@ import { AppShell } from '@/components/app-shell';
 import { isSupabaseConfigured } from '@/lib/env';
 import { useTheme } from '@/lib/use-theme';
 import { useThemeSync } from '@/lib/use-theme-sync';
+import { useRealtimeSync } from '@/lib/realtime';
 
 /**
  * The signed-in app. `AppShell` owns the navigation chrome (sidebar or bottom
@@ -13,6 +14,7 @@ import { useThemeSync } from '@/lib/use-theme-sync';
 export default function AppLayout() {
   const { colors } = useTheme();
   useThemeSync();
+  useRealtimeSync();
 
   if (!isSupabaseConfigured) {
     return <Redirect href="/setup-required" />;

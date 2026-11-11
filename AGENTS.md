@@ -16,7 +16,7 @@ policies, indexes, updated_at triggers, `handle_new_user()` profile trigger,
 clearing, sign-up / sign-in / sign-out / password reset, three-step onboarding, route guards via
 `Stack.Protected`. Docs live in `supabase/README.md`.
 
-Next phases, in order: 8 polish + realtime + offline queue → 9 release.
+Next phases, in order: 9 release.
 
 Phase 3 (tasks) is done: `src/features/tasks/` (`keys.ts`, `grouping.ts` pure logic, `api.ts`,
 `queries.ts`), `TaskRow`, `DateField` (presets + month calendar), `QuickAdd`, `TaskEditor` sheet,
@@ -80,6 +80,16 @@ them up. The evening review time is stored as `time` (returns "HH:MM:SS"), so th
 5 chars before comparing. Reminder toggles and time changes call `updateProfile` and re-schedule
 the notification. Sign-out warns guests first; delete account calls the `delete_own_account()`
 RPC. `npm test` still 67 (no new pure logic this phase).
+
+Phase 8 (polish + sync) is done: `src/lib/realtime.ts` (one Supabase channel per user, invalidates
+task/category/habit/journal/profile query keys on any change), `src/hooks/use-is-online.ts` and
+`src/components/offline-banner.tsx`, `networkMode: 'offlineFirst'` + retry on mutations in
+`src/lib/query-client.ts`, and `aria-checked`/`aria-pressed`/`aria-selected` added next to
+`accessibilityState` in `Checkbox`, `Chip`, `SegmentedControl`, `MoodPicker` and the nav tabs in
+`app-shell.tsx`. Empty states, the offline banner and the reminder banner fade in via Reanimated.
+`npm test` still 67. Realtime needs the tables enabled under Supabase → Database → Replication;
+without it the app still works with manual refresh. Offline detection on native defaults to
+"online" until a connectivity library is wired in.
 
 Guest mode (anonymous sign-in) sits on top of phase 2: `signInAsGuest()` in
 `src/features/auth/api.ts`, `isGuest` on `useAuth()`, the **Continue as guest** button on the

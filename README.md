@@ -9,14 +9,12 @@ becomes that day's journal entry.
 Built for Android, iOS and web from a single Expo + React Native codebase, with data stored in
 Supabase so every device sees the same thing. Each account only ever sees its own rows.
 
-> **Status:** phase 7 of 9 is complete — the database with row-level security, accounts, onboarding,
-> a full task list (priorities, due dates, categories, four views, quick add), a guest mode you can
-> try without signing up, habits with streaks, back-filling, completion rates and a month heatmap,
-> a Today screen that pulls the two together behind one progress ring, a journal with a guided
-> evening review, mood, tags, search and a mood chart, and now settings: appearance that syncs to
-> your account, reminder toggles with an evening review time, an in-app reminder banner, sign-out
-> and account deletion with the right warnings, and JSON/CSV export. Polish, realtime and the
-> release prep come next. See [Roadmap](#roadmap).
+> **Status:** phase 8 of 9 is complete — the database with row-level security, accounts, onboarding,
+> a full task list, a guest mode, habits with streaks and heatmap, a Today screen, a journal with
+> guided evening review, settings with reminders and export, and now polish and sync: accessibility
+> fixes (aria state on the web), Supabase Realtime keeping every device in sync, an offline queue
+> so mutations replay when the connection returns, an offline banner, and gentle fade-in motion.
+> Release prep comes next. See [Roadmap](#roadmap).
 
 ## What it will do
 
@@ -314,6 +312,28 @@ mirrored into local storage so the app paints correctly before the profile loads
 The reminder scheduling lives in `src/lib/reminders.ts`, the export in `src/features/export/api.ts`
 and `src/lib/export-file.ts`, and the profile read/write in `src/features/auth/use-profile.ts`.
 
+## How polish and sync work
+
+- **Accessibility.** Icon-only controls carry labels, tap targets are at least 44 px, and on the
+  web the checkbox, chip, mood face and segmented control now expose `aria-checked` /
+  `aria-pressed` / `aria-selected`, so a screen reader (or a test) can read their state. The
+  existing label-based fallback ("mark … as done" / "as not done") stays, because it works
+  everywhere React Native Web does not forward state.
+- **Realtime.** `src/lib/realtime.ts` opens one Supabase channel per signed-in user and
+  subscribes to changes on `tasks`, `categories`, `habits`, `habit_logs`, `journal_entries`,
+  `tags`, `journal_entry_tags` and `profiles`. Any change on another device (or another tab)
+  invalidates the matching TanStack Query cache, so the UI re-fetches instead of polling.
+  Requires Realtime to be enabled for those tables in the Supabase dashboard; if it is not, the
+  app keeps working with manual refresh.
+- **Offline queue.** Mutations run with `networkMode: 'offlineFirst'`, so a dropped connection
+  pauses them instead of failing, and TanStack Query replays them when the connection returns.
+  `refetchOnReconnect` refreshes reads at the same time. `src/hooks/use-is-online.ts` tracks
+  connectivity and `src/components/offline-banner.tsx` shows a banner while offline.
+- **Motion.** Empty states fade in, and the offline and reminder banners fade in when they
+  appear. Everything else keeps its instant, calm feel — no decorative animation on lists.
+- **Web layout.** The responsive shell (bottom tabs on phones, sidebar from 900 px, 720 px
+  content column) is unchanged; the new banners sit above the content in both layouts.
+
 ## How guest mode works
 
 **Continue as guest** on the sign-in screen creates an anonymous Supabase account: a real user row
@@ -375,7 +395,7 @@ supabase/
 - [x] **5. Today** — combined habits + tasks, progress ring, overdue handling
 - [x] **6. Journal and evening review** — guided review, prompts, mood, tags, history, search
 - [x] **7. Reminders and settings** — notifications, preferences, export, account deletion
-- [ ] **8. Polish and sync** — realtime, offline queue, animations, accessibility, web layout
+- [x] **8. Polish and sync** — realtime, offline queue, animations, accessibility, web layout
 - [ ] **9. Release prep** — test checklist, EAS Build, web deployment
 
 ## Troubleshooting

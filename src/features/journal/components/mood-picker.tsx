@@ -36,6 +36,7 @@ export function MoodPicker({ value, onChange }: MoodPickerProps) {
               accessibilityRole="radio"
               accessibilityLabel={mood.label}
               accessibilityState={{ selected }}
+              aria-checked={selected}
               style={({ pressed }) => ({
                 flex: 1,
                 minHeight: 56,

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
@@ -23,30 +24,32 @@ export function EmptyState({ icon, title, message, action }: EmptyStateProps) {
   const { colors } = useTheme();
 
   return (
-    <Card>
-      <View style={{ alignItems: 'center', paddingVertical: Space.lg, gap: Space.sm }}>
-        {icon ? (
-          <View
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: Radius.pill,
-              backgroundColor: colors.surfaceMuted,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: Space.xs,
-            }}>
-            {icon}
-          </View>
-        ) : null}
-        <AppText variant="bodyStrong" style={{ textAlign: 'center' }}>
-          {title}
-        </AppText>
-        <AppText variant="small" tone="secondary" style={{ textAlign: 'center', maxWidth: 340 }}>
-          {message}
-        </AppText>
-        {action ? <View style={{ marginTop: Space.md }}>{action}</View> : null}
-      </View>
-    </Card>
+    <Animated.View entering={FadeIn.duration(260)}>
+      <Card>
+        <View style={{ alignItems: 'center', paddingVertical: Space.lg, gap: Space.sm }}>
+          {icon ? (
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: Radius.pill,
+                backgroundColor: colors.surfaceMuted,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: Space.xs,
+              }}>
+              {icon}
+            </View>
+          ) : null}
+          <AppText variant="bodyStrong" style={{ textAlign: 'center' }}>
+            {title}
+          </AppText>
+          <AppText variant="small" tone="secondary" style={{ textAlign: 'center', maxWidth: 340 }}>
+            {message}
+          </AppText>
+          {action ? <View style={{ marginTop: Space.md }}>{action}</View> : null}
+        </View>
+      </Card>
+    </Animated.View>
   );
 }
