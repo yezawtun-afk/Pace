@@ -9,9 +9,11 @@
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#FBFBF8",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yezawtun.pace"
     },
     "android": {
+      "package": "com.yezawtun.pace",
       "adaptiveIcon": {
         "backgroundColor": "#E9F0E6",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -27,6 +29,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {
