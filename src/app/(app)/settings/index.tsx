@@ -290,7 +290,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <ScreenHeader eyebrow="You" title="Settings" subtitle="Make Pace feel like yours." />
+      <ScreenHeader eyebrow="You" title="Settings" subtitle="Preferences and account." />
 
       <SectionHeader title="Appearance" />
       <Card>

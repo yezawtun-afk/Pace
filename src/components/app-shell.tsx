@@ -95,9 +95,6 @@ function Sidebar() {
         </View>
         <View>
           <AppText variant="heading">Pace</AppText>
-          <AppText variant="caption" tone="tertiary">
-            Find your daily pace.
-          </AppText>
         </View>
       </View>
 
