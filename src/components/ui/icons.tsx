@@ -206,6 +206,15 @@ export function EyeOffIcon(props: IconProps) {
   );
 }
 
+export function SearchIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <Circle cx="11" cy="11" r="6.5" />
+      <Line x1="16" y1="16" x2="20.5" y2="20.5" />
+    </SvgIcon>
+  );
+}
+
 /** Brand mark: a single leaf, used in the sidebar and the setup screen. */
 export function LeafIcon(props: IconProps) {
   return (

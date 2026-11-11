@@ -1,17 +1,17 @@
 import { format } from 'date-fns';
 import { router } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
 
 import { TextLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ErrorState } from '@/components/ui/error-state';
-import { HabitsIcon, TasksIcon } from '@/components/ui/icons';
+import { HabitsIcon, MoonIcon, TasksIcon } from '@/components/ui/icons';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Screen, ScreenHeader } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { AppText } from '@/components/ui/text';
-import { Space } from '@/constants/theme';
+import { Radius, Space } from '@/constants/theme';
 import { useProfile } from '@/features/auth/use-profile';
 import { useHabitLogs, useHabits, useToggleHabitDay } from '@/features/habits/queries';
 import { QuickAdd } from '@/features/tasks/components/quick-add';
@@ -117,6 +117,27 @@ export default function TodayScreen() {
           summaryLoading
             ? 'Everything for today, in one calm place.'
             : subtitleFor(progress.remaining, progress.total)
+        }
+        action={
+          <Pressable
+            onPress={() => router.push('/journal/review')}
+            accessibilityRole="button"
+            accessibilityLabel="Start the evening review"
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: Space.xs + 1,
+              minHeight: 44,
+              paddingHorizontal: Space.md + 2,
+              borderRadius: Radius.pill,
+              backgroundColor: colors.surfaceMuted,
+              opacity: pressed ? 0.7 : 1,
+            })}>
+            <MoonIcon size={15} color={colors.accent} />
+            <AppText variant="smallStrong" color={colors.accent}>
+              Review
+            </AppText>
+          </Pressable>
         }
       />
 

@@ -121,6 +121,14 @@ export async function deleteTask(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Moves a set of tasks to a new due date in one round trip (or clears it). */
+export async function rescheduleTasks(ids: string[], dueDate: string | null): Promise<void> {
+  if (ids.length === 0) return;
+
+  const { error } = await supabase.from('tasks').update({ due_date: dueDate }).in('id', ids);
+  if (error) throw error;
+}
+
 // --- categories -------------------------------------------------------------
 
 export async function fetchCategories(): Promise<Category[]> {

@@ -9,11 +9,12 @@ becomes that day's journal entry.
 Built for Android, iOS and web from a single Expo + React Native codebase, with data stored in
 Supabase so every device sees the same thing. Each account only ever sees its own rows.
 
-> **Status:** phase 5 of 9 is complete — the database with row-level security, accounts, onboarding,
+> **Status:** phase 6 of 9 is complete — the database with row-level security, accounts, onboarding,
 > a full task list (priorities, due dates, categories, four views, quick add), a guest mode you can
 > try without signing up, habits with streaks, back-filling, completion rates and a month heatmap,
-> and a Today screen that pulls the two together behind one progress ring. The journal and the
-> evening review arrive next. See [Roadmap](#roadmap).
+> a Today screen that pulls the two together behind one progress ring, and a journal with a guided
+> evening review, mood, tags, search and a mood chart. Reminders, settings and export come next.
+> See [Roadmap](#roadmap).
 
 ## What it will do
 
@@ -24,7 +25,7 @@ Supabase so every device sees the same thing. Each account only ever sees its ow
 - **Tasks** — P1–P4 priorities, due dates and times, categories, Today / Upcoming / All /
   Completed views, quick add.
 - **Journal** — one entry per day with mood, tags, a daily prompt and autosaved drafts, plus
-  calendar browsing, search and a mood chart.
+  month-by-month history, search and a mood chart.
 - **Evening review** — a short guided flow: what you completed and missed, mood, prompt, free
   writing, tags, and an offer to move unfinished tasks to tomorrow.
 - **Reminders, export, dark mode** — local notifications on mobile (in-app banners on web),
@@ -145,16 +146,16 @@ same Wi-Fi network.
 
 ## Scripts
 
-| Command                           | What it does                          |
-| --------------------------------- | ------------------------------------- |
-| `npm start`                       | Start the Expo dev server             |
-| `npm run web` / `android` / `ios` | Start directly on one target          |
-| `npm run typecheck`               | TypeScript, no emit                   |
-| `npm run lint`                    | ESLint (includes Prettier rules)      |
-| `npm run lint:fix`                | Fix lint/format issues automatically  |
-| `npm run format`                  | Format the repo with Prettier         |
-| `npm test`                        | Jest: the pure habit and Today logic  |
-| `npm run export:web`              | Produce a static web build in `dist/` |
+| Command                           | What it does                              |
+| --------------------------------- | ----------------------------------------- |
+| `npm start`                       | Start the Expo dev server                 |
+| `npm run web` / `android` / `ios` | Start directly on one target              |
+| `npm run typecheck`               | TypeScript, no emit                       |
+| `npm run lint`                    | ESLint (includes Prettier rules)          |
+| `npm run lint:fix`                | Fix lint/format issues automatically      |
+| `npm run format`                  | Format the repo with Prettier             |
+| `npm test`                        | Jest: pure habit, Today and journal logic |
+| `npm run export:web`              | Produce a static web build in `dist/`     |
 
 ## How tasks work
 
@@ -239,6 +240,54 @@ something off here checks it off everywhere.
 The rules for "what belongs on today's list" live in `src/features/today/summary.ts` as pure
 functions, so `npm test` covers them alongside the habit maths.
 
+## How the journal works
+
+**Journal** is the closing half of the daily loop: today's entry at the top, then the history
+month by month, a mood chart and a search field. The **Review** pill in the Today and Journal
+headers opens the guided version.
+
+### The evening review
+
+Four short steps, one screen, no account of the day is required:
+
+1. **What happened today** — how many habits and tasks got done, and what did not.
+2. **Anything left over?** — every open task is pre-selected; one tap pushes them all to tomorrow.
+   Anything you unselect keeps its original date.
+3. **How did it feel?** — one of five faces, or nothing at all.
+4. **Anything worth keeping?** — the day's prompt, a few lines of free writing, and tags.
+
+**Save and finish** writes the entry and takes you back to the journal. Leaving without saving
+writes nothing, and re-running the review on a day that already has an entry loads that entry
+first, so the flow is also the edit screen.
+
+### Writing without the flow
+
+- **Write freely** opens the same editor for today, and tapping any card in the history opens it
+  for that day. The editor holds the mood, the prompt, a title, the body and the tags.
+- **Drafts save themselves.** The body is written about a second after you stop typing, and once
+  more when the sheet closes, so a lost connection or an accidental tap cannot eat a paragraph.
+  "Saved" under the box is the confirmation; "Not saved" means it will retry on the next change.
+- **Tags save immediately** because picking one is a single action. Tags are shared across the
+  whole journal (`work`, `rest`, `family`), so the same word means the same thing everywhere.
+- **Deleting** an entry asks once, and only deletes that day.
+
+### The bits that are easy to get wrong
+
+- **One entry per day.** The table has a unique `(user_id, entry_date)` constraint and the app
+  upserts on it, so "save today" can never create two rows.
+- **The prompt is not stored on first view.** It is derived from the date
+  (`promptForDate` in `src/features/journal/journal.ts`), so the same day offers the same prompt on
+  every device, and a prompt you swap with **Another** is simply saved with the entry.
+- **Dates are calendar days**, like tasks: the entry belongs to your local day, not to a UTC
+  instant.
+- **Mood is 1–5** (rough → great) and may be empty. The chart shows the last 30 days as small bars
+  — an empty track is a day without a mood, not a bad day.
+- **The streak counts days written**, and today being empty does not break it; the day is not over.
+
+Journal data lives in `journal_entries`, `tags` and `journal_entry_tags`, all protected by
+row-level security. Grouping, search, the mood trend and the streak are pure functions, so
+`npm test` covers them without a database.
+
 ## How guest mode works
 
 **Continue as guest** on the sign-in screen creates an anonymous Supabase account: a real user row
@@ -268,7 +317,8 @@ src/
     ui/                 primitives: AppText, Card, Screen, Button, TextField, icons, …
     app-shell.tsx       bottom tabs on phones, sidebar on wide screens
   constants/            design tokens (theme.ts) + starter habits
-  features/             per-feature API calls, hooks and components (auth, onboarding, tasks, habits, today)
+  features/             per-feature API calls, hooks and components (auth, onboarding, tasks, habits,
+                        today, journal)
   hooks/                small reusable hooks
   lib/                  Supabase client, query client, preferences, env, date/time helpers, theme
   types/                database types + env typings
@@ -297,7 +347,7 @@ supabase/
 - [x] **3. Tasks** — CRUD, categories, priorities, due dates, views, quick add
 - [x] **4. Habits** — CRUD, check-off, back-fill, streaks with tests, stats and heatmap
 - [x] **5. Today** — combined habits + tasks, progress ring, overdue handling
-- [ ] **6. Journal and evening review** — guided review, prompts, mood, tags, history, search
+- [x] **6. Journal and evening review** — guided review, prompts, mood, tags, history, search
 - [ ] **7. Reminders and settings** — notifications, preferences, export, account deletion
 - [ ] **8. Polish and sync** — realtime, offline queue, animations, accessibility, web layout
 - [ ] **9. Release prep** — test checklist, EAS Build, web deployment

@@ -18,6 +18,7 @@ import {
   deleteTask,
   fetchCategories,
   fetchTasks,
+  rescheduleTasks,
   setTaskCompleted,
   updateTask,
   type TaskDraft,
@@ -118,6 +119,17 @@ export function useSetTaskCompleted() {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all });
     },
+  });
+}
+
+/** Moves tasks to a later date, used by the evening review's "move to tomorrow". */
+export function useRescheduleTasks() {
+  const invalidate = useInvalidateTasks();
+
+  return useMutation({
+    mutationFn: ({ ids, dueDate }: { ids: string[]; dueDate: string | null }) =>
+      rescheduleTasks(ids, dueDate),
+    onSuccess: () => void invalidate(),
   });
 }
 

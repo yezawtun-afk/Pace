@@ -14,13 +14,22 @@ type TextFieldProps = Omit<TextInputProps, 'style'> & {
   hint?: string;
   /** Renders a show/hide eye button. */
   secure?: boolean;
+  /** Taller box for long writing; multiline fields default to 96. */
+  minHeight?: number;
 };
 
 /**
  * Labelled text input with focus, error and password states. The tap target for
  * the reveal button is 44×44 so it is comfortable on a phone.
  */
-export function TextField({ label, error, hint, secure = false, ...inputProps }: TextFieldProps) {
+export function TextField({
+  label,
+  error,
+  hint,
+  secure = false,
+  minHeight,
+  ...inputProps
+}: TextFieldProps) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -57,7 +66,7 @@ export function TextField({ label, error, hint, secure = false, ...inputProps }:
           placeholderTextColor={colors.textTertiary}
           style={{
             flex: 1,
-            minHeight: isMultiline ? 96 : 46,
+            minHeight: minHeight ?? (isMultiline ? 96 : 46),
             paddingTop: isMultiline ? Space.md : Space.sm,
             paddingBottom: Space.sm,
             color: colors.text,

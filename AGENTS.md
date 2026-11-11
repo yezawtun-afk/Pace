@@ -16,8 +16,8 @@ policies, indexes, updated_at triggers, `handle_new_user()` profile trigger,
 clearing, sign-up / sign-in / sign-out / password reset, three-step onboarding, route guards via
 `Stack.Protected`. Docs live in `supabase/README.md`.
 
-Next phases, in order: 6 journal + evening review → 7 reminders/settings/export →
-8 polish + realtime + offline queue → 9 release.
+Next phases, in order: 7 reminders/settings/export → 8 polish + realtime + offline queue →
+9 release.
 
 Phase 3 (tasks) is done: `src/features/tasks/` (`keys.ts`, `grouping.ts` pure logic, `api.ts`,
 `queries.ts`), `TaskRow`, `DateField` (presets + month calendar), `QuickAdd`, `TaskEditor` sheet,
@@ -47,6 +47,28 @@ drops "Guest" so the header never reads like a form letter. The screen uses `use
 `useSetTaskCompleted`; `TaskEditor` mounts only while a row is open. Sections fail and retry
 independently, and an empty day gets a small `QuietNote` card rather than a big empty state.
 `npm test` is now 48 checks.
+
+Phase 6 (journal + evening review) is done: `src/features/journal/` (`journal.ts` pure + 19 tests,
+`keys.ts`, `api.ts`, `queries.ts`, components `mood-picker`, `mood-chart`, `tag-picker`,
+`entry-card`, `entry-editor`), `src/constants/prompts.ts` (16 prompts), a rewritten
+`src/app/(app)/journal/index.tsx` and `src/app/(app)/journal/review.tsx` (registered in
+`(app)/_layout.tsx`). One row per day: `saveEntry()` upserts on the table's
+`unique (user_id, entry_date)` constraint, so the editor and the review can both write "today"
+without creating duplicates. The prompt is derived from the date (`promptForDate`) instead of
+being stored on first view, so every device shows the same prompt. Tags are shared per user and
+linked through `journal_entry_tags`, loaded as one flat list and mapped with
+`tagNamesByEntry()`. The editor autosaves 900 ms after typing stops and flushes on close; tags
+save immediately (an entry row is created first if needed). The review is four steps (recap →
+move unfinished to tomorrow → mood → write/tags) and reuses `habitsForToday()` from
+`features/today/summary.ts`; `rescheduleTasks()` / `useRescheduleTasks()` in the tasks feature
+move the selected tasks to tomorrow. Entry points: the **Review** pill in the Today and Journal
+headers, plus **Evening review** / **Write freely** on the journal screen. Search matches title,
+body and tag names client-side over the last 400 entries. `npm test` is now 67 checks.
+
+Small supporting edits made in phase 6: `TextField` takes an optional `minHeight` (the body box is
+taller than the default), `SearchIcon` was added to `icons.tsx`, and the `Modal`-based `Sheet`
+leaves a hidden duplicate input in the DOM on web — target inputs with a non-zero width when
+automating the browser.
 
 Guest mode (anonymous sign-in) sits on top of phase 2: `signInAsGuest()` in
 `src/features/auth/api.ts`, `isGuest` on `useAuth()`, the **Continue as guest** button on the
@@ -133,7 +155,7 @@ npm run typecheck        # tsc --noEmit
 npm run lint             # expo lint (ESLint + Prettier rules)
 npm run lint:fix         # auto-fix what can be fixed
 npm run format           # prettier --write .
-npm test                 # jest (pure habit logic)
+npm test                 # jest (pure habit, Today and journal logic)
 npm run export:web       # static web build into dist/
 ```
 
