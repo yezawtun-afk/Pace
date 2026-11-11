@@ -7,6 +7,7 @@ import { TextLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ErrorState } from '@/components/ui/error-state';
 import { HabitsIcon, MoonIcon, TasksIcon } from '@/components/ui/icons';
+import { ReminderBanner } from '@/components/reminder-banner';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Screen, ScreenHeader } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
@@ -140,6 +141,10 @@ export default function TodayScreen() {
           </Pressable>
         }
       />
+
+      <View style={{ marginTop: Space.md, marginBottom: Space.lg }}>
+        <ReminderBanner onOpen={() => router.push('/journal/review')} />
+      </View>
 
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.xl }}>

@@ -16,8 +16,7 @@ policies, indexes, updated_at triggers, `handle_new_user()` profile trigger,
 clearing, sign-up / sign-in / sign-out / password reset, three-step onboarding, route guards via
 `Stack.Protected`. Docs live in `supabase/README.md`.
 
-Next phases, in order: 7 reminders/settings/export → 8 polish + realtime + offline queue →
-9 release.
+Next phases, in order: 8 polish + realtime + offline queue → 9 release.
 
 Phase 3 (tasks) is done: `src/features/tasks/` (`keys.ts`, `grouping.ts` pure logic, `api.ts`,
 `queries.ts`), `TaskRow`, `DateField` (presets + month calendar), `QuickAdd`, `TaskEditor` sheet,
@@ -69,6 +68,18 @@ Small supporting edits made in phase 6: `TextField` takes an optional `minHeight
 taller than the default), `SearchIcon` was added to `icons.tsx`, and the `Modal`-based `Sheet`
 leaves a hidden duplicate input in the DOM on web — target inputs with a non-zero width when
 automating the browser.
+
+Phase 7 (settings, reminders, export) is done: a rewritten `src/app/(app)/settings/index.tsx`
+(Appearance, Reminders, Account, Your data, About sections), `src/components/reminder-banner.tsx`,
+`src/lib/reminders.ts` (permission + daily scheduling via expo-notifications, web no-op),
+`src/features/export/api.ts` (`fetchExportData`, `toCsv`) and `src/lib/export-file.ts`
+(download on web, share sheet on mobile), plus `useUpdateProfile()` and `useThemeSync()` in
+`src/features/auth/use-profile.ts` and `src/lib/use-theme-sync.ts`. Profile fields already
+existed in the schema (`evening_review_time`, `theme`, `*_reminders_enabled`); this phase wires
+them up. The evening review time is stored as `time` (returns "HH:MM:SS"), so the UI slices to
+5 chars before comparing. Reminder toggles and time changes call `updateProfile` and re-schedule
+the notification. Sign-out warns guests first; delete account calls the `delete_own_account()`
+RPC. `npm test` still 67 (no new pure logic this phase).
 
 Guest mode (anonymous sign-in) sits on top of phase 2: `signInAsGuest()` in
 `src/features/auth/api.ts`, `isGuest` on `useAuth()`, the **Continue as guest** button on the

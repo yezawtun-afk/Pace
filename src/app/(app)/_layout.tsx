@@ -3,6 +3,7 @@ import { Redirect, Stack } from 'expo-router';
 import { AppShell } from '@/components/app-shell';
 import { isSupabaseConfigured } from '@/lib/env';
 import { useTheme } from '@/lib/use-theme';
+import { useThemeSync } from '@/lib/use-theme-sync';
 
 /**
  * The signed-in app. `AppShell` owns the navigation chrome (sidebar or bottom
@@ -11,6 +12,7 @@ import { useTheme } from '@/lib/use-theme';
  */
 export default function AppLayout() {
   const { colors } = useTheme();
+  useThemeSync();
 
   if (!isSupabaseConfigured) {
     return <Redirect href="/setup-required" />;

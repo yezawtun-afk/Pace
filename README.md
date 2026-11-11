@@ -9,12 +9,14 @@ becomes that day's journal entry.
 Built for Android, iOS and web from a single Expo + React Native codebase, with data stored in
 Supabase so every device sees the same thing. Each account only ever sees its own rows.
 
-> **Status:** phase 6 of 9 is complete — the database with row-level security, accounts, onboarding,
+> **Status:** phase 7 of 9 is complete — the database with row-level security, accounts, onboarding,
 > a full task list (priorities, due dates, categories, four views, quick add), a guest mode you can
 > try without signing up, habits with streaks, back-filling, completion rates and a month heatmap,
-> a Today screen that pulls the two together behind one progress ring, and a journal with a guided
-> evening review, mood, tags, search and a mood chart. Reminders, settings and export come next.
-> See [Roadmap](#roadmap).
+> a Today screen that pulls the two together behind one progress ring, a journal with a guided
+> evening review, mood, tags, search and a mood chart, and now settings: appearance that syncs to
+> your account, reminder toggles with an evening review time, an in-app reminder banner, sign-out
+> and account deletion with the right warnings, and JSON/CSV export. Polish, realtime and the
+> release prep come next. See [Roadmap](#roadmap).
 
 ## What it will do
 
@@ -288,6 +290,30 @@ Journal data lives in `journal_entries`, `tags` and `journal_entry_tags`, all pr
 row-level security. Grouping, search, the mood trend and the streak are pure functions, so
 `npm test` covers them without a database.
 
+## How settings, reminders and export work
+
+Open **Settings** in the nav. Everything here is stored on your profile (and the theme choice is
+mirrored into local storage so the app paints correctly before the profile loads).
+
+- **Appearance.** System / Light / Dark. The choice is saved to your profile, so signing in on
+  another device picks it up, and to local storage so the first paint is right.
+- **Reminders.** Three toggles — habits, tasks, evening review — plus an evening review time
+  (18:00 … 22:00). On a phone the evening review time schedules a daily local notification
+  (permission is asked the first time you enable it). On the web, where notifications cannot
+  fire, a banner appears on the Today screen once that time has passed and today is still
+  unwritten.
+- **Account.** Edit your display name, create an account if you are a guest (keeps all your data),
+  sign out, or delete the account. Signing out of a guest warns you first, because a guest exists
+  only on that device; deleting asks once and removes everything (profile, tasks, habits, history,
+  journal) via a database function — no service key needed.
+- **Your data.** **Export everything (JSON)** writes a full backup (profile, tasks, categories,
+  habits, habit logs, journal entries, tags and their links). **Export tasks (CSV)** writes the
+  task list. On the web the file downloads; on a phone the share sheet opens so you can save it
+  to Files, send it to yourself, and so on. Nothing is uploaded.
+
+The reminder scheduling lives in `src/lib/reminders.ts`, the export in `src/features/export/api.ts`
+and `src/lib/export-file.ts`, and the profile read/write in `src/features/auth/use-profile.ts`.
+
 ## How guest mode works
 
 **Continue as guest** on the sign-in screen creates an anonymous Supabase account: a real user row
@@ -348,7 +374,7 @@ supabase/
 - [x] **4. Habits** — CRUD, check-off, back-fill, streaks with tests, stats and heatmap
 - [x] **5. Today** — combined habits + tasks, progress ring, overdue handling
 - [x] **6. Journal and evening review** — guided review, prompts, mood, tags, history, search
-- [ ] **7. Reminders and settings** — notifications, preferences, export, account deletion
+- [x] **7. Reminders and settings** — notifications, preferences, export, account deletion
 - [ ] **8. Polish and sync** — realtime, offline queue, animations, accessibility, web layout
 - [ ] **9. Release prep** — test checklist, EAS Build, web deployment
 
