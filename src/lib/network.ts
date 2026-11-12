@@ -11,18 +11,13 @@
  * which is what we want: there is exactly one app and one network.
  */
 
-import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
+import NetInfo from '@react-native-community/netinfo';
 import { onlineManager } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 
-let started = false;
+import { isOnlineNow } from '@/lib/network-state';
 
-/** `isInternetReachable` is `null` until the first probe; treat it as online. */
-function isConnected(state: NetInfoState): boolean {
-  if (state.isConnected === false) return false;
-  if (state.isInternetReachable === false) return false;
-  return true;
-}
+let started = false;
 
 export function startNetworkWatcher(): void {
   // The web gets its events from the browser; nothing to add there.
@@ -30,6 +25,6 @@ export function startNetworkWatcher(): void {
   started = true;
 
   onlineManager.setEventListener((setOnline) =>
-    NetInfo.addEventListener((state) => setOnline(isConnected(state))),
+    NetInfo.addEventListener((state) => setOnline(isOnlineNow(state))),
   );
 }

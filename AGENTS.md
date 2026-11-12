@@ -144,7 +144,7 @@ long side, JPEG 0.7, refused above 2 MB; the stored value is a path, never a URL
   `colors.text` on `accentSoft` with an `accent` border. `scripts/contrast.mjs` is a one-off audit
   tool (safe to delete or keep).
 - Journal history paginates at 40 (`PAGE_SIZE`); `Card` clips its children (`overflow: 'hidden'`);
-  `TaskRow`, `TodayHabitRow` and `EntryCard` are `memo`ised. `npm test` is 83 checks.
+  `TaskRow`, `TodayHabitRow` and `EntryCard` are `memo`ised. `npm test` is 92 checks.
 
 ### Round 3 (phase F), release pass
 
@@ -261,7 +261,7 @@ npm run typecheck        # tsc --noEmit
 npm run lint             # expo lint (ESLint + Prettier rules)
 npm run lint:fix         # auto-fix what can be fixed
 npm run format           # prettier --write .
-npm test                 # jest (83 checks: habits, Today, journal, proofs, shortcuts)
+npm test                 # jest (92 checks: habits, Today, journal, proofs, shortcuts)
 npm run export:web       # static web build into dist/
 npm run icons            # redraw app icon, splash marks and favicon from scripts/generate-icons.mjs
 ```
