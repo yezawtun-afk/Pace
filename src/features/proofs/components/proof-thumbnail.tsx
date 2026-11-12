@@ -45,7 +45,7 @@ export function ProofThumbnail({ uri, size = 40, onPress }: ProofThumbnailProps)
     return (
       <Pressable
         onPress={onPress}
-        hitSlop={6}
+        hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel="Open proof photo"
         style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>

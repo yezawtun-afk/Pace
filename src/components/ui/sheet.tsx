@@ -114,6 +114,7 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer }: S
             </View>
 
             <ScrollView
+              showsVerticalScrollIndicator={Platform.OS !== 'web'}
               contentContainerStyle={{
                 paddingHorizontal: Space.xl,
                 paddingBottom: Space.xl,

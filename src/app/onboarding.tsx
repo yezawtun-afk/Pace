@@ -109,6 +109,7 @@ export default function OnboardingScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
+        showsVerticalScrollIndicator={Platform.OS !== 'web'}
         contentContainerStyle={{
           flexGrow: 1,
           alignItems: 'center',

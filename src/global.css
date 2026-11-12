@@ -23,8 +23,20 @@ body {
   box-sizing: border-box;
 }
 
-/* Visible focus ring for keyboard users on the web. Matches `accent` in
-   src/constants/theme.ts (CSS cannot import the TS token). */
+/* Hide the native scrollbar on the web for the calm, border-led look. Scrolling
+   still works with the wheel, trackpad and touch; the indicator just stays out
+   of the way. */
+html,
+body,
+#root {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar {
+  display: none;
+}
 *:focus-visible {
   outline: 2px solid #C4472E;
   outline-offset: 2px;

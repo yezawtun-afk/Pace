@@ -239,306 +239,317 @@ export default function TodayScreen() {
   const allDone = progress.total > 0 && progress.remaining === 0 && !summaryLoading;
 
   return (
-    <Screen
-      refreshControl={
-        <RefreshControl
-          refreshing={habitsQuery.isRefetching || logsQuery.isRefetching || tasksQuery.isRefetching}
-          onRefresh={refresh}
-          tintColor={colors.accent}
-          colors={[colors.accent]}
-        />
-      }>
-      <ScreenHeader
-        eyebrow={format(today, 'EEEE d MMMM')}
-        title={name ? `Good ${greeting}, ${name}` : `Good ${greeting}`}
-        action={
-          <Pressable
-            onPress={() => router.push('/journal/review')}
-            accessibilityRole="button"
-            accessibilityLabel="Start the evening review"
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: Space.xs + 1,
-              minHeight: 44,
-              paddingHorizontal: Space.md + 2,
-              borderRadius: Radius.pill,
-              backgroundColor: colors.surfaceMuted,
-              opacity: pressed ? 0.7 : 1,
-            })}>
-            <MoonIcon size={15} color={colors.accent} />
-            <AppText variant="smallStrong" color={colors.accent}>
-              Review
-            </AppText>
-          </Pressable>
-        }
-      />
-
-      <View style={{ marginTop: Space.md, marginBottom: Space.lg }}>
-        <ReminderBanner onOpen={() => router.push('/journal/review')} />
-      </View>
-
-      {summaryLoading ? (
-        <View style={{ gap: Space.md, marginBottom: Space.lg }}>
-          <Skeleton height={12} width="40%" />
-          <Skeleton height={8} />
-        </View>
-      ) : progress.total > 0 ? (
-        <View style={{ marginBottom: Space.lg, gap: Space.xs + 2 }}>
-          <View
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <AppText variant="smallStrong">
-              {progress.done} of {progress.total} done
-            </AppText>
-            {allDone ? (
-              <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(Motion.slow)}>
-                <AppText variant="small" tone="accent">
-                  All done for today.
-                </AppText>
-              </Animated.View>
-            ) : null}
-          </View>
-          <ProgressBar ratio={progress.ratio} />
-        </View>
-      ) : null}
-
-      {nothingScheduled && habitRows.length === 0 && taskRows.length === 0 ? (
-        <EmptyState
-          icon={<HabitsIcon size={20} color={colors.textTertiary} />}
-          title="Nothing scheduled today"
-          message="Add a habit or a task to get started."
-          action={
-            <View style={{ flexDirection: 'row', gap: Space.sm }}>
-              <Button
-                label="Add a habit"
-                onPress={() => router.navigate('/habits')}
-                fullWidth={false}
-              />
-              <Button
-                label="Add a task"
-                variant="secondary"
-                onPress={() => setQuickAddOpen(true)}
-                fullWidth={false}
-              />
-            </View>
-          }
-        />
-      ) : (
-        <>
-          <View style={{ marginTop: Space.lg }}>
-            <SectionHeader
-              title="Habits"
-              count={habitsLoading ? undefined : habitRows.length}
-              action={<TextLink label="Add" onPress={() => router.navigate('/habits')} />}
-            />
-
-            {habitsLoading ? (
-              <View style={{ gap: Space.sm }}>
-                <Skeleton height={52} />
-                <Skeleton height={52} />
-              </View>
-            ) : habitsQuery.isError || logsQuery.isError ? (
-              <ErrorState
-                message="Your habits could not be loaded."
-                onRetry={() => {
-                  void habitsQuery.refetch();
-                  void logsQuery.refetch();
-                }}
-              />
-            ) : habitRows.length === 0 ? (
-              <AppText variant="small" tone="tertiary" style={{ paddingVertical: Space.sm }}>
-                No habits due today.
-              </AppText>
-            ) : (
-              <Card padded={false}>
-                {habitRows.map((entry, index) => (
-                  <TodayHabitRow
-                    key={entry.habit.id}
-                    entry={entry}
-                    done={doneByHabit.get(entry.habit.id) ?? NO_LOGS}
-                    today={today}
-                    proofPath={proofByHabit.get(entry.habit.id) ?? null}
-                    last={index === habitRows.length - 1}
-                    onToggle={() => {
-                      tapFeedback();
-                      const currentlyDone = doneByHabit.get(entry.habit.id)?.has(todayKey) ?? false;
-                      toggleHabitDay.mutate({
-                        habitId: entry.habit.id,
-                        date: todayKey,
-                        done: !currentlyDone,
-                      });
-                      if (!currentlyDone && entry.habit.ask_for_proof) {
-                        setProofHabit({ id: entry.habit.id, name: entry.habit.name });
-                      }
-                    }}
-                    onOpen={() => router.navigate('/habits')}
-                    onReplaceProof={() => {
-                      setProofPreviousPath(proofByHabit.get(entry.habit.id) ?? null);
-                      setProofHabit({ id: entry.habit.id, name: entry.habit.name });
-                    }}
-                    onRemoveProof={() => {
-                      const path = proofByHabit.get(entry.habit.id);
-                      if (path) void removeProofFor(entry.habit.id, path);
-                    }}
-                  />
-                ))}
-              </Card>
-            )}
-          </View>
-
-          <View style={{ marginTop: Space.xl }}>
-            <SectionHeader
-              title="Tasks"
-              count={tasksLoading ? undefined : taskRows.length}
-              action={<TextLink label="All" onPress={() => router.navigate('/tasks')} />}
-            />
-
-            {tasksLoading ? (
-              <View style={{ gap: Space.sm }}>
-                <Skeleton height={44} />
-                <Skeleton height={44} />
-              </View>
-            ) : tasksQuery.isError ? (
-              <ErrorState
-                message="Your tasks could not be loaded."
-                onRetry={() => void tasksQuery.refetch()}
-              />
-            ) : taskRows.length === 0 ? (
-              <AppText variant="small" tone="tertiary" style={{ paddingVertical: Space.sm }}>
-                No tasks due today.
-              </AppText>
-            ) : (
-              <Card padded={false}>
-                {taskRows.map((task, index) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    category={task.category_id ? categoriesById.get(task.category_id) : undefined}
-                    onToggle={() => {
-                      tapFeedback();
-                      setTaskCompleted.mutate({
-                        taskId: task.id,
-                        completed: !task.completed,
-                      });
-                    }}
-                    onOpen={() => openEditor(task)}
-                    last={index === taskRows.length - 1}
-                  />
-                ))}
-              </Card>
-            )}
-          </View>
-        </>
-      )}
-
-      {editorOpen && editorTask ? (
-        <TaskEditor
-          visible
-          task={editorTask}
-          defaultDate={editorTask.due_date ?? todayString(today)}
-          onClose={closeEditor}
-        />
-      ) : null}
-
-      {newTaskOpen ? (
-        <TaskEditor
-          visible
-          task={null}
-          defaultDate={todayString(today)}
-          onClose={() => setNewTaskOpen(false)}
-        />
-      ) : null}
-
-      <Sheet
-        visible={quickAddOpen}
-        onClose={() => setQuickAddOpen(false)}
-        title="Add a task"
-        subtitle="Quick entry">
-        <QuickAdd placeholder="What needs doing?" dueDate={todayString(today)} />
-      </Sheet>
-
-      <Sheet
-        visible={proofHabit !== null}
-        onClose={closeProofSheet}
-        title={proofPreviousPath ? 'Replace the photo?' : 'Add a photo?'}
-        subtitle={proofHabit?.name ?? ''}
-        footer={
-          <Button
-            label="Skip"
-            variant="quiet"
-            onPress={closeProofSheet}
-            disabled={proofUploading}
+    <View style={{ flex: 1 }}>
+      <Screen
+        refreshControl={
+          <RefreshControl
+            refreshing={
+              habitsQuery.isRefetching || logsQuery.isRefetching || tasksQuery.isRefetching
+            }
+            onRefresh={refresh}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
           />
         }>
-        <View style={{ gap: Space.md, alignItems: 'center' }}>
-          <ProofThumbnail uri={proofLocalUri ?? proofUri} size={96} />
-
-          {proofUploading ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.sm }}>
-              <ActivityIndicator color={colors.accent} />
-              <AppText variant="small" tone="secondary">
-                Uploading…
+        <ScreenHeader
+          eyebrow={format(today, 'EEEE d MMMM')}
+          title={name ? `Good ${greeting}, ${name}` : `Good ${greeting}`}
+          action={
+            <Pressable
+              onPress={() => router.push('/journal/review')}
+              accessibilityRole="button"
+              accessibilityLabel="Start the evening review"
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: Space.xs + 1,
+                minHeight: 44,
+                paddingHorizontal: Space.md + 2,
+                borderRadius: Radius.pill,
+                backgroundColor: colors.surfaceMuted,
+                opacity: pressed ? 0.7 : 1,
+              })}>
+              <MoonIcon size={15} color={colors.accent} />
+              <AppText variant="smallStrong" color={colors.accent}>
+                Review
               </AppText>
-            </View>
-          ) : null}
+            </Pressable>
+          }
+        />
 
-          {proofError ? (
-            <View style={{ gap: Space.sm, alignItems: 'center' }}>
-              <AppText variant="small" tone="secondary" style={{ textAlign: 'center' }}>
-                {proofError}
+        <View style={{ marginTop: Space.md, marginBottom: Space.lg }}>
+          <ReminderBanner onOpen={() => router.push('/journal/review')} />
+        </View>
+
+        {summaryLoading ? (
+          <View style={{ gap: Space.md, marginBottom: Space.lg }}>
+            <Skeleton height={12} width="40%" />
+            <Skeleton height={8} />
+          </View>
+        ) : progress.total > 0 ? (
+          <View style={{ marginBottom: Space.lg, gap: Space.xs + 2 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+              <AppText variant="smallStrong">
+                {progress.done} of {progress.total} done
               </AppText>
-              {proofLocalUri && proofHabit ? (
-                <Button
-                  label="Retry upload"
-                  variant="secondary"
-                  fullWidth={false}
-                  onPress={() => void uploadProofFor(proofHabit.id, proofLocalUri)}
-                />
+              {allDone ? (
+                <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(Motion.slow)}>
+                  <AppText variant="small" tone="accent">
+                    All done for today.
+                  </AppText>
+                </Animated.View>
               ) : null}
             </View>
-          ) : null}
+            <ProgressBar ratio={progress.ratio} />
+          </View>
+        ) : null}
 
-          {proofDenied ? (
-            <View style={{ gap: Space.sm, alignItems: 'center' }}>
-              <AppText variant="small" tone="secondary" style={{ textAlign: 'center' }}>
-                {isWeb
-                  ? 'Your browser blocked the file picker. Allow it, then try again.'
-                  : 'Pace needs permission to use your photos. You can grant it in Settings.'}
-              </AppText>
-              {isWeb ? null : (
+        {nothingScheduled && habitRows.length === 0 && taskRows.length === 0 ? (
+          <EmptyState
+            icon={<HabitsIcon size={20} color={colors.textTertiary} />}
+            title="Nothing scheduled today"
+            message="Add a habit or a task to get started."
+            action={
+              <View style={{ flexDirection: 'row', gap: Space.sm }}>
                 <Button
-                  label="Open settings"
+                  label="Add a habit"
+                  onPress={() => router.navigate('/habits')}
+                  fullWidth={false}
+                />
+                <Button
+                  label="Add a task"
                   variant="secondary"
-                  fullWidth={false}
-                  onPress={() => void Linking.openSettings()}
-                />
-              )}
-            </View>
-          ) : null}
-
-          {!proofUploading && !proofUri && !proofLocalUri ? (
-            <View style={{ flexDirection: 'row', gap: Space.sm }}>
-              {isWeb ? null : (
-                <Button
-                  label="Camera"
-                  onPress={() => void handleProofPick('camera')}
+                  onPress={() => setQuickAddOpen(true)}
                   fullWidth={false}
                 />
-              )}
-              <Button
-                label="Gallery"
-                variant="secondary"
-                onPress={() => void handleProofPick('gallery')}
-                fullWidth={false}
+              </View>
+            }
+          />
+        ) : (
+          <>
+            <View style={{ marginTop: Space.lg }}>
+              <SectionHeader
+                title="Habits"
+                count={habitsLoading ? undefined : habitRows.length}
+                action={<TextLink label="Add" onPress={() => router.navigate('/habits')} />}
               />
-            </View>
-          ) : null}
 
-          <AppText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
-            Only you can see this photo.
-          </AppText>
-        </View>
-      </Sheet>
+              {habitsLoading ? (
+                <View style={{ gap: Space.sm }}>
+                  <Skeleton height={52} />
+                  <Skeleton height={52} />
+                </View>
+              ) : habitsQuery.isError || logsQuery.isError ? (
+                <ErrorState
+                  message="Your habits could not be loaded."
+                  onRetry={() => {
+                    void habitsQuery.refetch();
+                    void logsQuery.refetch();
+                  }}
+                />
+              ) : habitRows.length === 0 ? (
+                <AppText variant="small" tone="tertiary" style={{ paddingVertical: Space.sm }}>
+                  No habits due today.
+                </AppText>
+              ) : (
+                <Card padded={false}>
+                  {habitRows.map((entry, index) => (
+                    <TodayHabitRow
+                      key={entry.habit.id}
+                      entry={entry}
+                      done={doneByHabit.get(entry.habit.id) ?? NO_LOGS}
+                      today={today}
+                      proofPath={proofByHabit.get(entry.habit.id) ?? null}
+                      last={index === habitRows.length - 1}
+                      onToggle={() => {
+                        tapFeedback();
+                        const currentlyDone =
+                          doneByHabit.get(entry.habit.id)?.has(todayKey) ?? false;
+                        toggleHabitDay.mutate({
+                          habitId: entry.habit.id,
+                          date: todayKey,
+                          done: !currentlyDone,
+                        });
+                        if (!currentlyDone && entry.habit.ask_for_proof) {
+                          setProofHabit({ id: entry.habit.id, name: entry.habit.name });
+                        }
+                      }}
+                      onOpen={() => router.navigate('/habits')}
+                      onReplaceProof={() => {
+                        setProofPreviousPath(proofByHabit.get(entry.habit.id) ?? null);
+                        setProofHabit({ id: entry.habit.id, name: entry.habit.name });
+                      }}
+                      onRemoveProof={() => {
+                        const path = proofByHabit.get(entry.habit.id);
+                        if (path) void removeProofFor(entry.habit.id, path);
+                      }}
+                    />
+                  ))}
+                </Card>
+              )}
+            </View>
+
+            <View style={{ marginTop: Space.xl }}>
+              <SectionHeader
+                title="Tasks"
+                count={tasksLoading ? undefined : taskRows.length}
+                action={<TextLink label="All" onPress={() => router.navigate('/tasks')} />}
+              />
+
+              {tasksLoading ? (
+                <View style={{ gap: Space.sm }}>
+                  <Skeleton height={44} />
+                  <Skeleton height={44} />
+                </View>
+              ) : tasksQuery.isError ? (
+                <ErrorState
+                  message="Your tasks could not be loaded."
+                  onRetry={() => void tasksQuery.refetch()}
+                />
+              ) : taskRows.length === 0 ? (
+                <AppText variant="small" tone="tertiary" style={{ paddingVertical: Space.sm }}>
+                  No tasks due today.
+                </AppText>
+              ) : (
+                <Card padded={false}>
+                  {taskRows.map((task, index) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      category={task.category_id ? categoriesById.get(task.category_id) : undefined}
+                      onToggle={() => {
+                        tapFeedback();
+                        setTaskCompleted.mutate({
+                          taskId: task.id,
+                          completed: !task.completed,
+                        });
+                      }}
+                      onOpen={() => openEditor(task)}
+                      last={index === taskRows.length - 1}
+                    />
+                  ))}
+                </Card>
+              )}
+            </View>
+          </>
+        )}
+
+        {editorOpen && editorTask ? (
+          <TaskEditor
+            visible
+            task={editorTask}
+            defaultDate={editorTask.due_date ?? todayString(today)}
+            onClose={closeEditor}
+          />
+        ) : null}
+
+        {newTaskOpen ? (
+          <TaskEditor
+            visible
+            task={null}
+            defaultDate={todayString(today)}
+            onClose={() => setNewTaskOpen(false)}
+          />
+        ) : null}
+
+        <Sheet
+          visible={quickAddOpen}
+          onClose={() => setQuickAddOpen(false)}
+          title="Add a task"
+          subtitle="Quick entry">
+          <QuickAdd placeholder="What needs doing?" dueDate={todayString(today)} />
+        </Sheet>
+
+        <Sheet
+          visible={proofHabit !== null}
+          onClose={closeProofSheet}
+          title={proofPreviousPath ? 'Replace the photo?' : 'Add a photo?'}
+          subtitle={proofHabit?.name ?? ''}
+          footer={
+            <Button
+              label="Skip"
+              variant="quiet"
+              onPress={closeProofSheet}
+              disabled={proofUploading}
+            />
+          }>
+          <View style={{ gap: Space.md, alignItems: 'center' }}>
+            <ProofThumbnail uri={proofLocalUri ?? proofUri} size={96} />
+
+            {proofUploading ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.sm }}>
+                <ActivityIndicator color={colors.accent} />
+                <AppText variant="small" tone="secondary">
+                  Uploading…
+                </AppText>
+              </View>
+            ) : null}
+
+            {proofError ? (
+              <View style={{ gap: Space.sm, alignItems: 'center' }}>
+                <AppText variant="small" tone="secondary" style={{ textAlign: 'center' }}>
+                  {proofError}
+                </AppText>
+                {proofLocalUri && proofHabit ? (
+                  <Button
+                    label="Retry upload"
+                    variant="secondary"
+                    fullWidth={false}
+                    onPress={() => void uploadProofFor(proofHabit.id, proofLocalUri)}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+
+            {proofDenied ? (
+              <View style={{ gap: Space.sm, alignItems: 'center' }}>
+                <AppText variant="small" tone="secondary" style={{ textAlign: 'center' }}>
+                  {isWeb
+                    ? 'Your browser blocked the file picker. Allow it, then try again.'
+                    : 'Pace needs permission to use your photos. You can grant it in Settings.'}
+                </AppText>
+                {isWeb ? null : (
+                  <Button
+                    label="Open settings"
+                    variant="secondary"
+                    fullWidth={false}
+                    onPress={() => void Linking.openSettings()}
+                  />
+                )}
+              </View>
+            ) : null}
+
+            {!proofUploading && !proofUri && !proofLocalUri ? (
+              <View style={{ flexDirection: 'row', gap: Space.sm }}>
+                {isWeb ? null : (
+                  <Button
+                    label="Camera"
+                    onPress={() => void handleProofPick('camera')}
+                    fullWidth={false}
+                  />
+                )}
+                <Button
+                  label="Gallery"
+                  variant="secondary"
+                  onPress={() => void handleProofPick('gallery')}
+                  fullWidth={false}
+                />
+              </View>
+            ) : null}
+
+            <AppText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+              Only you can see this photo.
+            </AppText>
+          </View>
+        </Sheet>
+
+        <View style={{ height: Space.xxl }} />
+      </Screen>
 
       <Pressable
         onPress={() => setQuickAddOpen(true)}
@@ -563,6 +574,6 @@ export default function TodayScreen() {
         })}>
         <PlusIcon size={24} color={colors.accentText} />
       </Pressable>
-    </Screen>
+    </View>
   );
 }

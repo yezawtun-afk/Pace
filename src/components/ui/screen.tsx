@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import {
+  Platform,
   ScrollView,
   View,
   type ScrollViewProps,
@@ -59,6 +60,7 @@ export function Screen({ children, scroll = true, contentStyle, refreshControl }
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
+      showsVerticalScrollIndicator={Platform.OS !== 'web'}
       contentContainerStyle={{
         paddingTop,
         paddingBottom: Space.xxxl + Space.lg,

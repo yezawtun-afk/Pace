@@ -27,6 +27,7 @@ export default function SetupRequiredScreen() {
 
   return (
     <ScrollView
+      showsVerticalScrollIndicator={Platform.OS !== 'web'}
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
         flexGrow: 1,
