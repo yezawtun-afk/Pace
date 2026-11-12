@@ -114,6 +114,7 @@ export function useToggleHabitDay() {
             user_id: session?.user.id as string,
             log_date: date,
             completed: true,
+            proof_path: null,
             created_at: new Date().toISOString(),
           },
           ...without,

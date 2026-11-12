@@ -62,6 +62,7 @@ export type Habit = {
   target_per_week: number | null;
   reminder_time: TimeString | null;
   archived: boolean;
+  ask_for_proof: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -77,6 +78,7 @@ export type HabitInsert = {
   target_per_week?: number | null;
   reminder_time?: TimeString | null;
   archived?: boolean;
+  ask_for_proof?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -90,6 +92,7 @@ export type HabitLog = {
   user_id: string;
   log_date: DateString;
   completed: boolean;
+  proof_path: string | null;
   created_at: string;
 };
 
@@ -99,6 +102,7 @@ export type HabitLogInsert = {
   user_id: string;
   log_date: DateString;
   completed?: boolean;
+  proof_path?: string | null;
   created_at?: string;
 };
 
@@ -136,6 +140,7 @@ export type Task = {
   priority: number;
   completed: boolean;
   completed_at: string | null;
+  proof_path: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -151,6 +156,7 @@ export type TaskInsert = {
   priority?: number;
   completed?: boolean;
   completed_at?: string | null;
+  proof_path?: string | null;
   created_at?: string;
   updated_at?: string;
 };

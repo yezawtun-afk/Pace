@@ -132,3 +132,18 @@ export async function setHabitDone(
 
   if (error) throw error;
 }
+
+/** Sets or clears the proof photo path on a habit log row. */
+export async function setHabitLogProof(
+  habitId: string,
+  date: string,
+  proofPath: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('habit_logs')
+    .update({ proof_path: proofPath })
+    .eq('habit_id', habitId)
+    .eq('log_date', date);
+
+  if (error) throw error;
+}

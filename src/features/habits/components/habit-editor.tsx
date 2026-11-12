@@ -28,6 +28,7 @@ type Draft = {
   frequencyType: FrequencyType;
   days: number[];
   target: number;
+  askForProof: boolean;
 };
 
 function draftFrom(habit: Habit | null): Draft {
@@ -40,6 +41,7 @@ function draftFrom(habit: Habit | null): Draft {
       // Sensible starting point for "chosen days": the working week.
       days: [1, 2, 3, 4, 5],
       target: 3,
+      askForProof: false,
     };
   }
 
@@ -50,6 +52,7 @@ function draftFrom(habit: Habit | null): Draft {
     frequencyType: habit.frequency_type,
     days: habit.frequency_days,
     target: habit.target_per_week ?? 3,
+    askForProof: habit.ask_for_proof,
   };
 }
 
@@ -128,6 +131,7 @@ export function HabitEditor({ visible, onClose, habit }: HabitEditorProps) {
       frequency_type: draft.frequencyType,
       frequency_days: draft.days,
       target_per_week: draft.target,
+      ask_for_proof: draft.askForProof,
     };
 
     try {
@@ -370,6 +374,48 @@ export function HabitEditor({ visible, onClose, habit }: HabitEditorProps) {
             Due every day, including weekends.
           </AppText>
         ) : null}
+      </View>
+
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: Space.sm,
+          paddingVertical: Space.md,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+        }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <AppText variant="smallStrong">Ask for proof</AppText>
+          <AppText variant="caption" tone="tertiary">
+            Offer a photo when you check this habit off.
+          </AppText>
+        </View>
+        <Pressable
+          onPress={() => update({ askForProof: !draft.askForProof })}
+          accessibilityRole="switch"
+          accessibilityLabel="Ask for proof"
+          accessibilityState={{ checked: draft.askForProof }}
+          aria-checked={draft.askForProof}
+          style={({ pressed }) => ({
+            width: 44,
+            height: 26,
+            borderRadius: 13,
+            backgroundColor: draft.askForProof ? colors.accent : colors.surfaceMuted,
+            justifyContent: 'center',
+            paddingHorizontal: 3,
+            opacity: pressed ? 0.7 : 1,
+          })}>
+          <View
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: colors.surface,
+              alignSelf: draft.askForProof ? 'flex-end' : 'flex-start',
+            }}
+          />
+        </Pressable>
       </View>
 
       <View

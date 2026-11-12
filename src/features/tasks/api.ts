@@ -62,6 +62,7 @@ export type TaskDraft = {
   /** 1 = P1 … 4 = P4. */
   priority?: number;
   category_id?: string | null;
+  proof_path?: string | null;
 };
 
 /** Trims text and turns empty values into nulls before they reach Postgres. */
@@ -73,6 +74,7 @@ function toRow(draft: TaskDraft) {
     due_time: draft.due_time ? toDbTime(draft.due_time) : null,
     priority: draft.priority ?? 4,
     category_id: draft.category_id || null,
+    proof_path: draft.proof_path ?? null,
   };
 }
 

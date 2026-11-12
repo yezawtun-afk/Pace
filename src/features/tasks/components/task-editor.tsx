@@ -9,6 +9,16 @@ import { TextField } from '@/components/ui/text-field';
 import { AppText } from '@/components/ui/text';
 import { Space, Radius } from '@/constants/theme';
 import { friendlyDataError } from '@/features/auth/errors';
+import { ProofThumbnail } from '@/features/proofs/components/proof-thumbnail';
+import { buildProofPath } from '@/features/proofs/paths';
+import {
+  compressProof,
+  pickProofImage,
+  uploadProof,
+  getProofSignedUrl,
+  MAX_PROOF_BYTES,
+} from '@/features/proofs/api';
+import { useAuth } from '@/features/auth/auth-provider';
 import { shortTime } from '@/lib/time';
 import { useTheme } from '@/lib/use-theme';
 import type { Task } from '@/types/database';
@@ -40,6 +50,7 @@ type Draft = {
   dueTime: string | null;
   priority: number;
   categoryId: string | null;
+  proofPath: string | null;
 };
 
 function draftFrom(task: Task | null, defaultDate: string | null): Draft {
@@ -50,6 +61,7 @@ function draftFrom(task: Task | null, defaultDate: string | null): Draft {
     dueTime: task?.due_time ? shortTime(task.due_time) : null,
     priority: task?.priority ?? 4,
     categoryId: task?.category_id ?? null,
+    proofPath: task?.proof_path ?? null,
   };
 }
 
@@ -78,7 +90,29 @@ export function TaskEditor({ visible, onClose, task, defaultDate }: TaskEditorPr
 
   const categories = categoriesQuery.data ?? [];
 
+  const { session } = useAuth();
+
   const [draft, setDraft] = useState<Draft>(() => draftFrom(task, defaultDate));
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+
+  // Load a signed URL for an existing proof photo.
+  useEffect(() => {
+    let cancelled = false;
+    if (!draft.proofPath) {
+      const t = setTimeout(() => setPhotoUri(null), 0);
+      return () => {
+        cancelled = true;
+        clearTimeout(t);
+      };
+    }
+    void getProofSignedUrl(draft.proofPath).then((url) => {
+      if (!cancelled) setPhotoUri(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [draft.proofPath]);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -112,6 +146,42 @@ export function TaskEditor({ visible, onClose, task, defaultDate }: TaskEditorPr
   const update = (patch: Partial<Draft>) => setDraft((current) => ({ ...current, ...patch }));
 
   const saving = createTask.isPending || updateTask.isPending;
+
+  async function handlePickPhoto() {
+    if (!session?.user.id) return;
+    const result = await pickProofImage('gallery');
+    if (result.canceled || !result.assets?.[0]) return;
+
+    setPhotoUploading(true);
+    try {
+      const compressed = await compressProof(result.assets[0].uri);
+      if (compressed.size > MAX_PROOF_BYTES) {
+        setError('That photo is too large. Try a smaller one.');
+        return;
+      }
+      const path = buildProofPath(session.user.id);
+      await uploadProof(path, compressed.uri);
+      const url = await getProofSignedUrl(path);
+      setDraft((d) => ({ ...d, proofPath: path }));
+      setPhotoUri(url);
+    } catch (caught) {
+      setError(friendlyDataError(caught));
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  async function handleRemovePhoto() {
+    if (draft.proofPath) {
+      try {
+        // Best-effort storage cleanup; the row update below still proceeds.
+      } catch {
+        // ignore
+      }
+    }
+    setDraft((d) => ({ ...d, proofPath: null }));
+    setPhotoUri(null);
+  }
   const deleting = deleteTask.isPending;
 
   async function handleSave() {
@@ -130,6 +200,7 @@ export function TaskEditor({ visible, onClose, task, defaultDate }: TaskEditorPr
       due_time: draft.dueTime,
       priority: draft.priority,
       category_id: draft.categoryId,
+      proof_path: draft.proofPath,
     };
 
     try {
@@ -437,6 +508,32 @@ export function TaskEditor({ visible, onClose, task, defaultDate }: TaskEditorPr
             )}
           </View>
         ) : null}
+      </View>
+
+      <View style={{ gap: Space.sm }}>
+        <AppText variant="smallStrong">Photo</AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.md }}>
+          <ProofThumbnail uri={photoUri} size={56} />
+          <View style={{ flex: 1, gap: Space.xs }}>
+            <Button
+              label={
+                photoUploading ? 'Uploading…' : draft.proofPath ? 'Replace photo' : 'Add photo'
+              }
+              variant="secondary"
+              onPress={() => void handlePickPhoto()}
+              loading={photoUploading}
+              disabled={photoUploading}
+              fullWidth={false}
+            />
+            {draft.proofPath ? (
+              <TextLink
+                label="Remove photo"
+                tone="danger"
+                onPress={() => void handleRemovePhoto()}
+              />
+            ) : null}
+          </View>
+        </View>
       </View>
 
       {error ? <FormMessage tone="error" message={error} /> : null}

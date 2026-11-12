@@ -11,6 +11,8 @@ import { detectTimeZone } from '@/lib/time';
 import { supabase } from '@/lib/supabase';
 import type { Profile, ProfileUpdate } from '@/types/database';
 
+import { deleteAllProofsForUser } from '@/features/proofs/api';
+
 /**
  * Where Supabase sends the user after an email link.
  * Web: an absolute URL on the same site. Native: the `pace://` deep link.
@@ -273,6 +275,16 @@ export async function acceptRecoveryLink(url: string): Promise<boolean> {
  * app never needs the service-role key.
  */
 export async function deleteAccount() {
+  const { data } = await supabase.auth.getSession();
+  const userId = data.session?.user.id;
+  if (userId) {
+    try {
+      await deleteAllProofsForUser(userId);
+    } catch {
+      // Best effort: proceed even if storage cleanup fails.
+    }
+  }
+
   const { error } = await supabase.rpc('delete_own_account');
   if (error) throw error;
   await supabase.auth.signOut();

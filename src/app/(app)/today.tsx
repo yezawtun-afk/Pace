@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -15,8 +15,10 @@ import { Screen, ScreenHeader } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { AppText } from '@/components/ui/text';
 import { Radius, Space } from '@/constants/theme';
+import { useAuth } from '@/features/auth/auth-provider';
 import { useProfile } from '@/features/auth/use-profile';
 import { useHabitLogs, useHabits, useToggleHabitDay } from '@/features/habits/queries';
+import { setHabitLogProof } from '@/features/habits/api';
 import { QuickAdd } from '@/features/tasks/components/quick-add';
 import { TaskEditor } from '@/features/tasks/components/task-editor';
 import { TaskRow } from '@/features/tasks/components/task-row';
@@ -24,6 +26,17 @@ import { groupTasks, todayString } from '@/features/tasks/grouping';
 import { useCategories, useSetTaskCompleted, useTasks } from '@/features/tasks/queries';
 import { TodayHabitRow } from '@/features/today/components/today-habit-row';
 import { greetingFor, greetingName, habitsForToday, todayProgress } from '@/features/today/summary';
+import { ProofThumbnail } from '@/features/proofs/components/proof-thumbnail';
+import { buildProofPath } from '@/features/proofs/paths';
+import {
+  compressProof,
+  pickProofImage,
+  uploadProof,
+  getProofSignedUrl,
+  deleteProof,
+  MAX_PROOF_BYTES,
+} from '@/features/proofs/api';
+
 import { ReminderBanner } from '@/components/reminder-banner';
 import { Sheet } from '@/components/ui/sheet';
 import { useTheme } from '@/lib/use-theme';
@@ -93,6 +106,35 @@ export default function TodayScreen() {
   const [editorTask, setEditorTask] = useState<Task | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [proofHabit, setProofHabit] = useState<{ id: string; name: string } | null>(null);
+  const [proofUploading, setProofUploading] = useState(false);
+  const [proofUri, setProofUri] = useState<string | null>(null);
+
+  const { session } = useAuth();
+
+  async function handleProofPick(source: 'camera' | 'gallery') {
+    if (!session?.user.id || !proofHabit) return;
+    setProofUploading(true);
+    try {
+      const result = await pickProofImage(source);
+      if (result.canceled || !result.assets?.[0]) return;
+      const compressed = await compressProof(result.assets[0].uri);
+      if (compressed.size > MAX_PROOF_BYTES) {
+        return;
+      }
+      const path = buildProofPath(session.user.id);
+      await uploadProof(path, compressed.uri);
+      const url = await getProofSignedUrl(path);
+      await setHabitLogProof(proofHabit.id, todayString(today), path);
+      setProofUri(url);
+      // store path on the habit log — best effort: update via reschedule?
+      // We need to update habit_logs.proof_path. Use supabase directly via a helper.
+    } catch {
+      // ignore; keep check-off
+    } finally {
+      setProofUploading(false);
+    }
+  }
 
   function openEditor(task: Task) {
     setEditorTask(task);
@@ -244,11 +286,16 @@ export default function TodayScreen() {
                     last={index === habitRows.length - 1}
                     onToggle={() => {
                       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      const currentlyDone =
+                        doneByHabit.get(entry.habit.id)?.has(todayString(today)) ?? false;
                       toggleHabitDay.mutate({
                         habitId: entry.habit.id,
                         date: todayString(today),
-                        done: !entry.done,
+                        done: !currentlyDone,
                       });
+                      if (!currentlyDone && entry.habit.ask_for_proof) {
+                        setProofHabit({ id: entry.habit.id, name: entry.habit.name });
+                      }
                     }}
                     onOpen={() => router.navigate('/habits')}
                   />
@@ -317,6 +364,46 @@ export default function TodayScreen() {
         title="Add a task"
         subtitle="Quick entry">
         <QuickAdd placeholder="What needs doing?" dueDate={todayString(today)} />
+      </Sheet>
+
+      <Sheet
+        visible={proofHabit !== null}
+        onClose={() => {
+          setProofHabit(null);
+          setProofUri(null);
+        }}
+        title="Add a photo?"
+        subtitle={proofHabit?.name ?? ''}
+        footer={
+          <Button
+            label="Skip"
+            variant="quiet"
+            onPress={() => {
+              setProofHabit(null);
+              setProofUri(null);
+            }}
+          />
+        }>
+        <View style={{ gap: Space.md, alignItems: 'center' }}>
+          <ProofThumbnail uri={proofUri} size={96} />
+          <View style={{ flexDirection: 'row', gap: Space.sm }}>
+            <Button
+              label={proofUploading ? 'Uploading…' : 'Camera'}
+              onPress={() => void handleProofPick('camera')}
+              loading={proofUploading}
+              disabled={proofUploading}
+              fullWidth={false}
+            />
+            <Button
+              label="Gallery"
+              variant="secondary"
+              onPress={() => void handleProofPick('gallery')}
+              disabled={proofUploading}
+              fullWidth={false}
+            />
+          </View>
+          {proofUploading ? <ActivityIndicator color={colors.accent} /> : null}
+        </View>
       </Sheet>
 
       <Pressable
