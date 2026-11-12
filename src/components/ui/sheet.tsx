@@ -67,6 +67,7 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer }: S
           <View
             accessibilityViewIsModal
             style={{
+              flexShrink: 1,
               backgroundColor: colors.surface,
               borderTopLeftRadius: Radius.xl,
               borderTopRightRadius: Radius.xl,
@@ -115,6 +116,7 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer }: S
 
             <ScrollView
               showsVerticalScrollIndicator={Platform.OS !== 'web'}
+              style={{ flexShrink: 1 }}
               contentContainerStyle={{
                 paddingHorizontal: Space.xl,
                 paddingBottom: Space.xl,
