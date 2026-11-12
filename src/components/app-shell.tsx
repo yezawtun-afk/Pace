@@ -16,6 +16,7 @@ import { AppText } from '@/components/ui/text';
 import { Layout, Radius, Space } from '@/constants/theme';
 import { OfflineBanner } from '@/components/offline-banner';
 import { useIsWide } from '@/hooks/use-is-wide';
+import { pointerCursor, type PressableState } from '@/lib/web';
 import { useTheme } from '@/lib/use-theme';
 
 /** Every destination in the main app, in the order they appear in the nav. */
@@ -109,16 +110,23 @@ function Sidebar() {
               accessibilityState={{ selected: active }}
               aria-selected={active}
               accessibilityLabel={item.label}
-              style={({ pressed }) => ({
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: Space.md,
-                minHeight: Layout.minTapTarget,
-                paddingHorizontal: Space.md,
-                borderRadius: Radius.md,
-                backgroundColor: active ? colors.accentSoft : 'transparent',
-                opacity: pressed ? 0.65 : 1,
-              })}>
+              style={({ pressed, hovered }: PressableState) => [
+                pointerCursor,
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: Space.md,
+                  minHeight: Layout.minTapTarget,
+                  paddingHorizontal: Space.md,
+                  borderRadius: Radius.md,
+                  backgroundColor: active
+                    ? colors.accentSoft
+                    : hovered
+                      ? colors.surface
+                      : 'transparent',
+                  opacity: pressed ? 0.65 : 1,
+                },
+              ]}>
               <item.Icon
                 size={19}
                 color={active ? colors.accent : colors.textTertiary}
@@ -172,13 +180,19 @@ function BottomTabs() {
             accessibilityState={{ selected: active }}
             aria-selected={active}
             accessibilityLabel={item.label}
-            style={({ pressed }) => ({
-              flex: 1,
-              alignItems: 'center',
-              gap: 3,
-              paddingTop: 2,
-              opacity: pressed ? 0.6 : 1,
-            })}>
+            style={({ pressed, hovered }: PressableState) => [
+              pointerCursor,
+              {
+                flex: 1,
+                alignItems: 'center',
+                gap: 3,
+                paddingTop: 2,
+                opacity: pressed ? 0.6 : 1,
+              },
+              hovered && !active
+                ? { backgroundColor: colors.surfaceMuted, borderRadius: Radius.md }
+                : null,
+            ]}>
             <View
               style={{
                 width: 40,

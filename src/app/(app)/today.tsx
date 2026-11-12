@@ -1,8 +1,7 @@
 import { format } from 'date-fns';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { ActivityIndicator, Linking, Pressable, RefreshControl, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { Button, TextLink } from '@/components/ui/button';
@@ -10,15 +9,20 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { HabitsIcon, MoonIcon, PlusIcon } from '@/components/ui/icons';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Screen, ScreenHeader } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { AppText } from '@/components/ui/text';
-import { Radius, Space } from '@/constants/theme';
+import { Motion, Radius, Space } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useProfile } from '@/features/auth/use-profile';
-import { useHabitLogs, useHabits, useToggleHabitDay } from '@/features/habits/queries';
-import { setHabitLogProof } from '@/features/habits/api';
+import {
+  useHabitLogs,
+  useHabits,
+  useSetHabitLogProof,
+  useToggleHabitDay,
+} from '@/features/habits/queries';
 import { QuickAdd } from '@/features/tasks/components/quick-add';
 import { TaskEditor } from '@/features/tasks/components/task-editor';
 import { TaskRow } from '@/features/tasks/components/task-row';
@@ -30,16 +34,21 @@ import { ProofThumbnail } from '@/features/proofs/components/proof-thumbnail';
 import { buildProofPath } from '@/features/proofs/paths';
 import {
   compressProof,
+  deleteProof,
+  ensureProofPermission,
   pickProofImage,
   uploadProof,
   getProofSignedUrl,
-  deleteProof,
   MAX_PROOF_BYTES,
 } from '@/features/proofs/api';
 
 import { ReminderBanner } from '@/components/reminder-banner';
 import { Sheet } from '@/components/ui/sheet';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { successFeedback, tapFeedback } from '@/lib/haptics';
 import { useTheme } from '@/lib/use-theme';
+import { isWeb } from '@/lib/web';
 import type { Category, Task } from '@/types/database';
 
 const NO_LOGS = new Set<string>();
@@ -84,6 +93,19 @@ export default function TodayScreen() {
     [habitsLoading, habitsQuery.data, doneByHabit, today],
   );
 
+  const todayKey = todayString(today);
+
+  /** Today's proof photo path per habit, for the row thumbnails. */
+  const proofByHabit = useMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const log of logsQuery.data ?? []) {
+      if (log.log_date === todayKey && log.proof_path) map.set(log.habit_id, log.proof_path);
+    }
+
+    return map;
+  }, [logsQuery.data, todayKey]);
+
   const taskRows = groupTasks('today', tasksQuery.data ?? [], today).flatMap(
     (group) => group.tasks,
   );
@@ -105,34 +127,101 @@ export default function TodayScreen() {
 
   const [editorTask, setEditorTask] = useState<Task | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+
   const [proofHabit, setProofHabit] = useState<{ id: string; name: string } | null>(null);
+  /** An older photo for the same day, deleted once the new one lands. */
+  const [proofPreviousPath, setProofPreviousPath] = useState<string | null>(null);
   const [proofUploading, setProofUploading] = useState(false);
   const [proofUri, setProofUri] = useState<string | null>(null);
+  /** The compressed file on the device, kept so a failed upload can be retried. */
+  const [proofLocalUri, setProofLocalUri] = useState<string | null>(null);
+  const [proofError, setProofError] = useState<string | null>(null);
+  const [proofDenied, setProofDenied] = useState(false);
 
   const { session } = useAuth();
+  const setHabitLogProof = useSetHabitLogProof();
+  const reducedMotion = useReducedMotion();
+
+  // On a laptop: "n" starts a new task, "q" opens the quick entry box.
+  useKeyboardShortcuts({
+    n: () => setNewTaskOpen(true),
+    q: () => setQuickAddOpen(true),
+  });
+
+  function closeProofSheet() {
+    setProofHabit(null);
+    setProofPreviousPath(null);
+    setProofUri(null);
+    setProofLocalUri(null);
+    setProofError(null);
+    setProofDenied(false);
+  }
+
+  /** Uploads an already-compressed file and attaches it to today's log. */
+  async function uploadProofFor(habitId: string, localUri: string) {
+    if (!session?.user.id) return;
+
+    setProofUploading(true);
+    setProofError(null);
+
+    const previous = proofPreviousPath;
+
+    try {
+      const path = buildProofPath(session.user.id);
+      await uploadProof(path, localUri);
+      const url = await getProofSignedUrl(path);
+      await setHabitLogProof.mutateAsync({ habitId, date: todayKey, proofPath: path });
+
+      // One photo per check-off: the old object goes once the row points at the
+      // new one. A failed cleanup only leaves an orphan file, never a broken row.
+      if (previous) void deleteProof(previous).catch(() => {});
+
+      setProofUri(url);
+      successFeedback();
+      closeProofSheet();
+    } catch {
+      // The check-off is already saved; only the photo is missing.
+      setProofError('The photo did not upload. Your check-off is saved.');
+    } finally {
+      setProofUploading(false);
+    }
+  }
+
+  /** Clears the photo for one habit and deletes the file behind it. */
+  async function removeProofFor(habitId: string, path: string) {
+    await setHabitLogProof.mutateAsync({ habitId, date: todayKey, proofPath: null });
+    void deleteProof(path).catch(() => {});
+  }
 
   async function handleProofPick(source: 'camera' | 'gallery') {
-    if (!session?.user.id || !proofHabit) return;
-    setProofUploading(true);
+    if (!proofHabit) return;
+
+    const habitId = proofHabit.id;
+    setProofError(null);
+    setProofDenied(false);
+
+    const allowed = await ensureProofPermission(source);
+    if (!allowed) {
+      setProofDenied(true);
+      return;
+    }
+
     try {
       const result = await pickProofImage(source);
       if (result.canceled || !result.assets?.[0]) return;
+
       const compressed = await compressProof(result.assets[0].uri);
       if (compressed.size > MAX_PROOF_BYTES) {
+        setProofError('That photo is too large. Pick a smaller one.');
         return;
       }
-      const path = buildProofPath(session.user.id);
-      await uploadProof(path, compressed.uri);
-      const url = await getProofSignedUrl(path);
-      await setHabitLogProof(proofHabit.id, todayString(today), path);
-      setProofUri(url);
-      // store path on the habit log — best effort: update via reschedule?
-      // We need to update habit_logs.proof_path. Use supabase directly via a helper.
+
+      setProofLocalUri(compressed.uri);
+      await uploadProofFor(habitId, compressed.uri);
     } catch {
-      // ignore; keep check-off
-    } finally {
-      setProofUploading(false);
+      setProofError('That photo could not be opened. Try another one.');
     }
   }
 
@@ -202,29 +291,14 @@ export default function TodayScreen() {
               {progress.done} of {progress.total} done
             </AppText>
             {allDone ? (
-              <Animated.View entering={FadeIn.duration(300)}>
+              <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(Motion.slow)}>
                 <AppText variant="small" tone="accent">
                   All done for today.
                 </AppText>
               </Animated.View>
             ) : null}
           </View>
-          <View
-            style={{
-              height: 6,
-              borderRadius: Radius.pill,
-              backgroundColor: colors.surfaceMuted,
-              overflow: 'hidden',
-            }}>
-            <View
-              style={{
-                height: '100%',
-                width: `${Math.round(progress.ratio * 100)}%`,
-                backgroundColor: colors.accent,
-                borderRadius: Radius.pill,
-              }}
-            />
-          </View>
+          <ProgressBar ratio={progress.ratio} />
         </View>
       ) : null}
 
@@ -283,14 +357,14 @@ export default function TodayScreen() {
                     entry={entry}
                     done={doneByHabit.get(entry.habit.id) ?? NO_LOGS}
                     today={today}
+                    proofPath={proofByHabit.get(entry.habit.id) ?? null}
                     last={index === habitRows.length - 1}
                     onToggle={() => {
-                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      const currentlyDone =
-                        doneByHabit.get(entry.habit.id)?.has(todayString(today)) ?? false;
+                      tapFeedback();
+                      const currentlyDone = doneByHabit.get(entry.habit.id)?.has(todayKey) ?? false;
                       toggleHabitDay.mutate({
                         habitId: entry.habit.id,
-                        date: todayString(today),
+                        date: todayKey,
                         done: !currentlyDone,
                       });
                       if (!currentlyDone && entry.habit.ask_for_proof) {
@@ -298,6 +372,14 @@ export default function TodayScreen() {
                       }
                     }}
                     onOpen={() => router.navigate('/habits')}
+                    onReplaceProof={() => {
+                      setProofPreviousPath(proofByHabit.get(entry.habit.id) ?? null);
+                      setProofHabit({ id: entry.habit.id, name: entry.habit.name });
+                    }}
+                    onRemoveProof={() => {
+                      const path = proofByHabit.get(entry.habit.id);
+                      if (path) void removeProofFor(entry.habit.id, path);
+                    }}
                   />
                 ))}
               </Card>
@@ -333,7 +415,7 @@ export default function TodayScreen() {
                     task={task}
                     category={task.category_id ? categoriesById.get(task.category_id) : undefined}
                     onToggle={() => {
-                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      tapFeedback();
                       setTaskCompleted.mutate({
                         taskId: task.id,
                         completed: !task.completed,
@@ -358,6 +440,15 @@ export default function TodayScreen() {
         />
       ) : null}
 
+      {newTaskOpen ? (
+        <TaskEditor
+          visible
+          task={null}
+          defaultDate={todayString(today)}
+          onClose={() => setNewTaskOpen(false)}
+        />
+      ) : null}
+
       <Sheet
         visible={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
@@ -368,41 +459,84 @@ export default function TodayScreen() {
 
       <Sheet
         visible={proofHabit !== null}
-        onClose={() => {
-          setProofHabit(null);
-          setProofUri(null);
-        }}
-        title="Add a photo?"
+        onClose={closeProofSheet}
+        title={proofPreviousPath ? 'Replace the photo?' : 'Add a photo?'}
         subtitle={proofHabit?.name ?? ''}
         footer={
           <Button
             label="Skip"
             variant="quiet"
-            onPress={() => {
-              setProofHabit(null);
-              setProofUri(null);
-            }}
+            onPress={closeProofSheet}
+            disabled={proofUploading}
           />
         }>
         <View style={{ gap: Space.md, alignItems: 'center' }}>
-          <ProofThumbnail uri={proofUri} size={96} />
-          <View style={{ flexDirection: 'row', gap: Space.sm }}>
-            <Button
-              label={proofUploading ? 'Uploading…' : 'Camera'}
-              onPress={() => void handleProofPick('camera')}
-              loading={proofUploading}
-              disabled={proofUploading}
-              fullWidth={false}
-            />
-            <Button
-              label="Gallery"
-              variant="secondary"
-              onPress={() => void handleProofPick('gallery')}
-              disabled={proofUploading}
-              fullWidth={false}
-            />
-          </View>
-          {proofUploading ? <ActivityIndicator color={colors.accent} /> : null}
+          <ProofThumbnail uri={proofLocalUri ?? proofUri} size={96} />
+
+          {proofUploading ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.sm }}>
+              <ActivityIndicator color={colors.accent} />
+              <AppText variant="small" tone="secondary">
+                Uploading…
+              </AppText>
+            </View>
+          ) : null}
+
+          {proofError ? (
+            <View style={{ gap: Space.sm, alignItems: 'center' }}>
+              <AppText variant="small" tone="secondary" style={{ textAlign: 'center' }}>
+                {proofError}
+              </AppText>
+              {proofLocalUri && proofHabit ? (
+                <Button
+                  label="Retry upload"
+                  variant="secondary"
+                  fullWidth={false}
+                  onPress={() => void uploadProofFor(proofHabit.id, proofLocalUri)}
+                />
+              ) : null}
+            </View>
+          ) : null}
+
+          {proofDenied ? (
+            <View style={{ gap: Space.sm, alignItems: 'center' }}>
+              <AppText variant="small" tone="secondary" style={{ textAlign: 'center' }}>
+                {isWeb
+                  ? 'Your browser blocked the file picker. Allow it, then try again.'
+                  : 'Pace needs permission to use your photos. You can grant it in Settings.'}
+              </AppText>
+              {isWeb ? null : (
+                <Button
+                  label="Open settings"
+                  variant="secondary"
+                  fullWidth={false}
+                  onPress={() => void Linking.openSettings()}
+                />
+              )}
+            </View>
+          ) : null}
+
+          {!proofUploading && !proofUri && !proofLocalUri ? (
+            <View style={{ flexDirection: 'row', gap: Space.sm }}>
+              {isWeb ? null : (
+                <Button
+                  label="Camera"
+                  onPress={() => void handleProofPick('camera')}
+                  fullWidth={false}
+                />
+              )}
+              <Button
+                label="Gallery"
+                variant="secondary"
+                onPress={() => void handleProofPick('gallery')}
+                fullWidth={false}
+              />
+            </View>
+          ) : null}
+
+          <AppText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+            Only you can see this photo.
+          </AppText>
         </View>
       </Sheet>
 

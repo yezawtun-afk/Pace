@@ -10,9 +10,13 @@ import { AppText } from '@/components/ui/text';
 import { Space, Radius } from '@/constants/theme';
 import { friendlyDataError } from '@/features/auth/errors';
 import { ProofThumbnail } from '@/features/proofs/components/proof-thumbnail';
+import { ProofViewer } from '@/features/proofs/components/proof-viewer';
+import { useProofUrl } from '@/features/proofs/queries';
 import { buildProofPath } from '@/features/proofs/paths';
 import {
   compressProof,
+  deleteProof,
+  ensureProofPermission,
   pickProofImage,
   uploadProof,
   getProofSignedUrl,
@@ -93,26 +97,9 @@ export function TaskEditor({ visible, onClose, task, defaultDate }: TaskEditorPr
   const { session } = useAuth();
 
   const [draft, setDraft] = useState<Draft>(() => draftFrom(task, defaultDate));
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
-
-  // Load a signed URL for an existing proof photo.
-  useEffect(() => {
-    let cancelled = false;
-    if (!draft.proofPath) {
-      const t = setTimeout(() => setPhotoUri(null), 0);
-      return () => {
-        cancelled = true;
-        clearTimeout(t);
-      };
-    }
-    void getProofSignedUrl(draft.proofPath).then((url) => {
-      if (!cancelled) setPhotoUri(url);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [draft.proofPath]);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const photoUri = useProofUrl(draft.proofPath).data ?? null;
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -149,21 +136,34 @@ export function TaskEditor({ visible, onClose, task, defaultDate }: TaskEditorPr
 
   async function handlePickPhoto() {
     if (!session?.user.id) return;
-    const result = await pickProofImage('gallery');
-    if (result.canceled || !result.assets?.[0]) return;
+
+    setError(null);
+
+    const allowed = await ensureProofPermission('gallery');
+    if (!allowed) {
+      setError('Pace needs permission to use your photos. You can grant it in Settings.');
+      return;
+    }
 
     setPhotoUploading(true);
     try {
+      const result = await pickProofImage('gallery');
+      if (result.canceled || !result.assets?.[0]) return;
+
       const compressed = await compressProof(result.assets[0].uri);
       if (compressed.size > MAX_PROOF_BYTES) {
         setError('That photo is too large. Try a smaller one.');
         return;
       }
+
       const path = buildProofPath(session.user.id);
       await uploadProof(path, compressed.uri);
-      const url = await getProofSignedUrl(path);
+      // Warm the signed-URL cache before the row renders the new photo.
+      await getProofSignedUrl(path);
+
+      const previous = draft.proofPath;
       setDraft((d) => ({ ...d, proofPath: path }));
-      setPhotoUri(url);
+      if (previous) void deleteProof(previous).catch(() => {});
     } catch (caught) {
       setError(friendlyDataError(caught));
     } finally {
@@ -172,15 +172,9 @@ export function TaskEditor({ visible, onClose, task, defaultDate }: TaskEditorPr
   }
 
   async function handleRemovePhoto() {
-    if (draft.proofPath) {
-      try {
-        // Best-effort storage cleanup; the row update below still proceeds.
-      } catch {
-        // ignore
-      }
-    }
+    const previous = draft.proofPath;
     setDraft((d) => ({ ...d, proofPath: null }));
-    setPhotoUri(null);
+    if (previous) void deleteProof(previous).catch(() => {});
   }
   const deleting = deleteTask.isPending;
 
@@ -513,7 +507,11 @@ export function TaskEditor({ visible, onClose, task, defaultDate }: TaskEditorPr
       <View style={{ gap: Space.sm }}>
         <AppText variant="smallStrong">Photo</AppText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.md }}>
-          <ProofThumbnail uri={photoUri} size={56} />
+          <ProofThumbnail
+            uri={photoUri}
+            size={56}
+            onPress={draft.proofPath ? () => setViewerOpen(true) : undefined}
+          />
           <View style={{ flex: 1, gap: Space.xs }}>
             <Button
               label={
@@ -534,9 +532,28 @@ export function TaskEditor({ visible, onClose, task, defaultDate }: TaskEditorPr
             ) : null}
           </View>
         </View>
+        <AppText variant="caption" tone="tertiary">
+          Only you can see this photo.
+        </AppText>
       </View>
 
       {error ? <FormMessage tone="error" message={error} /> : null}
+
+      {viewerOpen ? (
+        <ProofViewer
+          visible
+          uri={photoUri}
+          onClose={() => setViewerOpen(false)}
+          onReplace={() => {
+            setViewerOpen(false);
+            void handlePickPhoto();
+          }}
+          onRemove={() => {
+            setViewerOpen(false);
+            void handleRemovePhoto();
+          }}
+        />
+      ) : null}
     </Sheet>
   );
 }

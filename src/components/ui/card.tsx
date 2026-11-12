@@ -26,6 +26,8 @@ export function Card({ children, style, padded = true }: CardProps) {
           borderRadius: Radius.lg,
           borderWidth: 1,
           borderColor: colors.border,
+          // Keeps hover tints and list dividers inside the rounded corners.
+          overflow: 'hidden',
         },
         padded && { padding: Space.xl },
         style,

@@ -215,6 +215,17 @@ export function SearchIcon(props: IconProps) {
   );
 }
 
+/** A small photo frame, used wherever a proof photo is attached. */
+export function ImageIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <Rect x="3" y="4.5" width="18" height="15" rx="2.5" />
+      <Circle cx="8.5" cy="9.5" r="1.6" />
+      <Path d="M3.5 16.5 9 11.5l4 3.5 3-2.5 4.5 3.5" />
+    </SvgIcon>
+  );
+}
+
 /** Brand mark: a single leaf, used in the sidebar and the setup screen. */
 export function LeafIcon(props: IconProps) {
   return (

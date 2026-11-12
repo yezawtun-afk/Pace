@@ -60,6 +60,20 @@ export default function HabitsScreen() {
     return map;
   }, [logsQuery.data]);
 
+  /** Days with a proof photo, per habit, for the calendar dots. */
+  const proofsByHabit = useMemo(() => {
+    const map = new Map<string, Map<string, string>>();
+
+    for (const log of logsQuery.data ?? []) {
+      if (!log.proof_path) continue;
+      const forHabit = map.get(log.habit_id) ?? new Map<string, string>();
+      forHabit.set(log.log_date, log.proof_path);
+      map.set(log.habit_id, forHabit);
+    }
+
+    return map;
+  }, [logsQuery.data]);
+
   const loading = habitsQuery.isPending || logsQuery.isPending;
   const loadFailed = habitsQuery.isError || logsQuery.isError;
 
@@ -168,6 +182,7 @@ export default function HabitsScreen() {
           habit={detailHabit}
           done={doneByHabit.get(detailHabit.id) ?? new Set<string>()}
           today={today}
+          proofs={proofsByHabit.get(detailHabit.id)}
           onClose={() => setDetailId(null)}
           onEdit={() => openEditor(detailHabit)}
           onToggleDay={(date) => toggle(detailHabit.id, date)}

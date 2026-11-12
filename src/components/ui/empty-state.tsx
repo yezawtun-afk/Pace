@@ -4,7 +4,8 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
-import { Radius, Space } from '@/constants/theme';
+import { Motion, Radius, Space } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/lib/use-theme';
 
 type EmptyStateProps = {
@@ -22,9 +23,10 @@ type EmptyStateProps = {
  */
 export function EmptyState({ icon, title, message, action }: EmptyStateProps) {
   const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
 
   return (
-    <Animated.View entering={FadeIn.duration(260)}>
+    <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(Motion.slow)}>
       <Card>
         <View style={{ alignItems: 'center', paddingVertical: Space.lg, gap: Space.sm }}>
           {icon ? (

@@ -9,17 +9,17 @@ becomes that day's journal entry.
 Built for Android, iOS and web from a single Expo + React Native codebase, with data stored in
 Supabase so every device sees the same thing. Each account only ever sees its own rows.
 
-> **Status:** phase 8 of 9 is complete — the database with row-level security, accounts, onboarding,
-> a full task list, a guest mode, habits with streaks and heatmap, a Today screen, a journal with
-> guided evening review, settings with reminders and export, and now polish and sync: accessibility
-> fixes (aria state on the web), Supabase Realtime keeping every device in sync, an offline queue
-> so mutations replay when the connection returns, an offline banner, and gentle fade-in motion.
-> Release prep comes next. See [Roadmap](#roadmap).
+> **Status:** all nine phases are complete, plus a second round of design work: a calmer,
+> more deliberate visual system (warm paper, one terracotta accent, Lora for the journal), a
+> redesigned Today screen, optional proof photos on habit check-offs and tasks, keyboard
+> shortcuts on the web, reduced-motion support, haptics, and an accessibility pass. Every row is
+> still protected by row-level security and every photo is private to its owner. See
+> [Roadmap](#roadmap).
 
 ## What it will do
 
 - **Today** — habits due today with streaks, tasks due today plus anything overdue, a progress
-  ring, and quick add.
+  bar, quick add, and a floating **+**.
 - **Habits** — daily / chosen weekdays / X times per week, one-tap check-off, back-filling,
   streaks that respect the schedule, 7/30/90-day completion rates, month heatmap, weekly bars.
 - **Tasks** — P1–P4 priorities, due dates and times, categories, Today / Upcoming / All /
@@ -28,6 +28,8 @@ Supabase so every device sees the same thing. Each account only ever sees its ow
   month-by-month history, search and a mood chart.
 - **Evening review** — a short guided flow: what you completed and missed, mood, prompt, free
   writing, tags, and an offer to move unfinished tasks to tomorrow.
+- **Proof photos** — an optional photo on a habit check-off (only if the habit asks for one) or
+  on any task, kept in a private bucket and visible only to you.
 - **Reminders, export, dark mode** — local notifications on mobile (in-app banners on web),
   JSON/CSV export, and a light/dark theme that follows the system or your choice.
 
@@ -71,14 +73,17 @@ npm install
 ### 3. Create the database
 
 Pace needs eight tables, their indexes and their security policies. They all live in one file:
-`supabase/migrations/0001_initial_schema.sql`.
+`supabase/migrations/0001_initial_schema.sql`. Proof photos add one more file,
+`supabase/migrations/0002_proof_photos.sql` (three columns plus the private `proofs` bucket and
+its storage policies).
 
 1. In your Supabase project open **SQL Editor → New query**.
 2. Open `supabase/migrations/0001_initial_schema.sql`, select all (`Ctrl+A`), copy (`Ctrl+C`).
 3. Paste it into the editor and press **Run**.
+4. Repeat with `supabase/migrations/0002_proof_photos.sql`.
 
 You should see **Success. No rows returned** — that is the expected result for a file that only
-creates things. Running it twice is safe: it stops early with `Pace schema already exists`.
+creates things. Both files are safe to run twice.
 
 Then, while you are in the dashboard, open **Authentication → URL Configuration** and add the
 redirect URLs the password-reset emails need:
@@ -288,6 +293,46 @@ Journal data lives in `journal_entries`, `tags` and `journal_entry_tags`, all pr
 row-level security. Grouping, search, the mood trend and the streak are pure functions, so
 `npm test` covers them without a database.
 
+## How proof photos work
+
+A photo is always optional, and no prompt ever stands between you and a check-off.
+
+- **Habits.** Turn on **Ask for a photo** in the habit editor. When you check that habit off, a
+  small sheet offers **Camera**, **Gallery** or **Skip**; the check-off is saved the moment you tap
+  the box, whether or not a photo follows. Habits that do not ask for a photo never show the sheet.
+- **Tasks.** The task editor has a **Photo** section with **Add photo**, **Replace photo** and
+  **Remove photo**.
+- **Where they show up.** A small thumbnail on the Today habit row (tap to open), a dot on the
+  habit's month calendar (tap the day to open the photo), and a photo strip in the evening review
+  and in that day's journal entry.
+
+How the file is handled:
+
+1. The picker asks for permission only at the moment you tap, with one sentence, and a denial
+   leaves a plain explanation plus **Open settings**. On the web it is the browser's own file
+   picker.
+2. The image is resized so its long side is at most 1080 px (never upscaled) and re-encoded as
+   JPEG at quality 0.7 — usually well under 500 KB. Anything still over 2 MB is refused with a
+   plain message instead of a silent failure.
+3. The resize decodes the photo to pixels and writes a brand-new file, so EXIF, GPS coordinates,
+   device model and the original filename never reach the server. `TESTING.md` has the one-minute
+   `exiftool` check to prove it on a real photo.
+4. The client stores a **storage path** (`{user_id}/{yyyy-mm}/{uuid}.jpg`), never a public URL.
+   Screens turn that path into a signed URL that lasts an hour, cached in memory for 55 minutes,
+   so a photo is fetched once and never becomes a guessable link.
+5. One photo per check-off: adding another replaces it, and the old file is deleted. Removing the
+   photo deletes the file too. Deleting the account removes every object under your folder.
+
+The bucket is private. Its policies compare the first path segment with `auth.uid()`, so user A
+cannot read, replace or delete user B's photo even with the exact path — see
+`supabase/migrations/0002_proof_photos.sql`. Failures never lose the check-off: if an upload
+fails you get **Retry upload**, and the compressed file stays on the device until the sheet
+closes.
+
+Code: `src/features/proofs/` (`api.ts`, `paths.ts`, `queries.ts`, the thumbnail, viewer and
+strip), with the habit sheet in `src/app/(app)/today.tsx` and the task section in
+`src/features/tasks/components/task-editor.tsx`.
+
 ## How settings, reminders and export work
 
 Open **Settings** in the nav. Everything here is stored on your profile (and the theme choice is
@@ -329,10 +374,22 @@ and `src/lib/export-file.ts`, and the profile read/write in `src/features/auth/u
   pauses them instead of failing, and TanStack Query replays them when the connection returns.
   `refetchOnReconnect` refreshes reads at the same time. `src/hooks/use-is-online.ts` tracks
   connectivity and `src/components/offline-banner.tsx` shows a banner while offline.
-- **Motion.** Empty states fade in, and the offline and reminder banners fade in when they
-  appear. Everything else keeps its instant, calm feel — no decorative animation on lists.
+- **Motion.** Every animation is under 250 ms (`Motion` in the design tokens): empty states fade
+  in, handlers settle, the check box gives a short press-in, the Today progress bar eases to its
+  new width. `useReducedMotion` reads the OS/browser setting and skips the fades and the skeleton
+  pulse, so nothing moves when you have asked for stillness.
+- **Haptics.** `src/lib/haptics.ts` is the only place that talks to the vibration motor: a light
+  tick on check-off, a success pulse when the evening review saves. It is a no-op on the web.
+- **Keyboard (web).** `n` opens a new task, `q` opens quick entry. Shortcuts are ignored while a
+  field has focus and when a modifier key is held, so typing never triggers one.
+- **Web details.** Visible focus rings for keyboard users, pointer cursors and hover tints on
+  buttons, chips, rows and nav items, and a 40-entry page for the journal history so opening the
+  tab stays quick.
+- **Contrast.** The terracotta accent was darkened to `#C4472E` so accent text is 4.63:1 on the
+  paper background and 4.90:1 behind white button text. Selected chips use ink on the tinted
+  surface rather than accent-on-tint, and every semantic colour is checked in both themes.
 - **Web layout.** The responsive shell (bottom tabs on phones, sidebar from 900 px, 720 px
-  content column) is unchanged; the new banners sit above the content in both layouts.
+  content column) is unchanged; the banners sit above the content in both layouts.
 
 ## How guest mode works
 
@@ -360,29 +417,34 @@ src/
     reset-password.tsx  opened from the emailed reset link
     setup-required.tsx  shown when .env has no Supabase credentials
   components/
-    ui/                 primitives: AppText, Card, Screen, Button, TextField, icons, …
+    ui/                 primitives: AppText, Card, Screen, Button, TextField, ProgressBar, icons, …
     app-shell.tsx       bottom tabs on phones, sidebar on wide screens
-  constants/            design tokens (theme.ts) + starter habits
+  constants/            design tokens (theme.ts) + starter habits + journal prompts
   features/             per-feature API calls, hooks and components (auth, onboarding, tasks, habits,
-                        today, journal)
-  hooks/                small reusable hooks
-  lib/                  Supabase client, query client, preferences, env, date/time helpers, theme
+                        today, journal, proofs, export)
+  hooks/                small reusable hooks (online, wide layout, reduced motion, shortcuts)
+  lib/                  Supabase client, query client, preferences, env, date/time helpers, haptics,
+                        theme, web helpers
   types/                database types + env typings
 supabase/
-  migrations/           the SQL you paste into the dashboard SQL Editor
+  migrations/           the SQL you paste into the dashboard SQL Editor (0001 schema, 0002 proofs)
   README.md             database and auth setup, verification queries, troubleshooting
 ```
 
 ## Design notes
 
-- Notion-like calm: generous whitespace, hairline borders instead of shadows, one accent colour
-  (a soft sage green) and system typography.
-- The whole palette lives in `src/constants/theme.ts`. Light and dark define the same keys, and
-  screens read colours through `useTheme()` — never hard-coded hex.
+- Notion-like calm with Todoist speed: generous whitespace, hairline borders instead of shadows,
+  warm paper (`#FBF8F4`) and warm charcoal in dark mode.
+- One accent — terracotta — and muted P1–P4 colours. No gradients, no glow, no emoji in the
+  chrome, one line-icon set drawn in SVG.
+- Type: Inter/system sans for the interface, Lora for the journal body and large titles. Two
+  families at most, on a 12 / 14 / 16 / 20 / 28 scale.
+- The whole palette, spacing scale, radii, type sizes and motion durations live in
+  `src/constants/theme.ts`. Screens read them through `useTheme()` — never hard-coded hex.
 - Layout: single column with bottom tabs on phones; sidebar plus a centred column capped at
   720 px from 900 px width upwards.
-- Accessibility: 44 px minimum tap targets, screen-reader labels on icon-only controls, and text
-  contrast kept at or above 4.5:1.
+- Accessibility: 44 px minimum tap targets, screen-reader labels on icon-only controls, selectable
+  state exposed to ARIA on the web, and text contrast kept at or above 4.5:1.
 
 ## Roadmap
 
@@ -392,11 +454,16 @@ supabase/
       onboarding
 - [x] **3. Tasks** — CRUD, categories, priorities, due dates, views, quick add
 - [x] **4. Habits** — CRUD, check-off, back-fill, streaks with tests, stats and heatmap
-- [x] **5. Today** — combined habits + tasks, progress ring, overdue handling
+- [x] **5. Today** — combined habits + tasks, progress bar, overdue handling
 - [x] **6. Journal and evening review** — guided review, prompts, mood, tags, history, search
 - [x] **7. Reminders and settings** — notifications, preferences, export, account deletion
 - [x] **8. Polish and sync** — realtime, offline queue, animations, accessibility, web layout
-- [ ] **9. Release prep** — test checklist, EAS Build, web deployment
+- [x] **9. Release prep** — test checklist, EAS Build, web deployment
+- [x] **Round 2 · A. Design tokens** — warm paper, terracotta, Lora, one type scale, tab pill
+- [x] **Round 2 · B. Today** — progress bar, tidy rows, floating add, empty state, skeletons
+- [x] **Round 2 · C. Copy and screens** — taglines removed, the system applied everywhere
+- [x] **Round 2 · D. Proof photos** — schema, private bucket, picker, compression, thumbnails
+- [x] **Round 2 · E. Polish** — haptics, reduced motion, shortcuts, pagination, contrast pass
 
 ## Troubleshooting
 

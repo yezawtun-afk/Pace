@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { Image, Platform } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
 
@@ -17,48 +18,96 @@ export type PickedProof = {
 };
 
 /**
- * Opens the camera or gallery, depending on `source`. Returns null when the
- * user cancels.
+ * Asks for camera or photo-library permission, right before the picker opens.
+ *
+ * The web has no OS permission: the browser's own file dialog is the gate, so
+ * this always returns true there. Native returns false when the person said no,
+ * which the screen turns into one plain sentence plus a Settings link.
+ */
+export async function ensureProofPermission(source: 'camera' | 'gallery'): Promise<boolean> {
+  if (Platform.OS === 'web') return true;
+
+  const result =
+    source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  return result.granted;
+}
+
+/**
+ * Opens the camera or the photo library. On the web both options use the
+ * browser's file picker, because a page cannot open the camera app directly.
+ * Returns null when the person cancels.
  */
 export async function pickProofImage(
   source: 'camera' | 'gallery',
 ): Promise<ImagePicker.ImagePickerResult> {
-  if (source === 'camera') {
-    return ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-      allowsEditing: false,
-    });
-  }
-
-  return ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  const options: ImagePicker.ImagePickerOptions = {
+    mediaTypes: ['images'],
     quality: 1,
     allowsEditing: false,
-  });
+  };
+
+  if (source === 'camera') {
+    if (Platform.OS === 'web') return ImagePicker.launchImageLibraryAsync(options);
+    return ImagePicker.launchCameraAsync(options);
+  }
+
+  return ImagePicker.launchImageLibraryAsync(options);
 }
 
 /**
- * Resizes to MAX_PROOF_DIMENSION on the long side and re-encodes as JPEG.
- * Re-encoding drops EXIF (including GPS) because the new file is written from
- * raw pixels.
+ * Resizes to MAX_PROOF_DIMENSION on the long side (never upscaling) and writes a
+ * new JPEG at quality 0.7.
+ *
+ * Metadata: the manipulator decodes the source to pixels and `saveAsync` writes
+ * a brand-new file, so EXIF, GPS coordinates, device model and the original
+ * filename are not carried into the upload. See TESTING.md for the one-minute
+ * check with `exiftool` on a real device.
  */
 export async function compressProof(uri: string): Promise<PickedProof> {
-  const result = await ImageManipulator.manipulateAsync(
-    uri,
-    [{ resize: { width: MAX_PROOF_DIMENSION } }],
-    { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
-  );
+  const size = await getImageSize(uri);
+
+  const context = ImageManipulator.manipulate(uri);
+  if (size && Math.max(size.width, size.height) > MAX_PROOF_DIMENSION) {
+    if (size.width >= size.height) {
+      context.resize({ width: MAX_PROOF_DIMENSION });
+    } else {
+      context.resize({ height: MAX_PROOF_DIMENSION });
+    }
+  }
+
+  const rendered = await context.renderAsync();
+  const result = await rendered.saveAsync({
+    compress: 0.7,
+    format: SaveFormat.JPEG,
+  });
 
   const info = await FileSystem.getInfoAsync(result.uri);
-  const size = info.exists && !info.isDirectory ? (info.size ?? 0) : 0;
+  const bytes = info.exists && !info.isDirectory ? (info.size ?? 0) : 0;
 
   return {
     uri: result.uri,
     width: result.width,
     height: result.height,
-    size,
+    size: bytes,
   };
+}
+
+/** Reads the source dimensions; null when the platform cannot report them. */
+async function getImageSize(uri: string): Promise<{ width: number; height: number } | null> {
+  try {
+    return await new Promise((resolve, reject) => {
+      Image.getSize(
+        uri,
+        (width, height) => resolve({ width, height }),
+        (error) => reject(error),
+      );
+    });
+  } catch {
+    return null;
+  }
 }
 
 export async function uploadProof(path: string, localUri: string): Promise<void> {
@@ -73,19 +122,36 @@ export async function uploadProof(path: string, localUri: string): Promise<void>
   if (error) throw error;
 }
 
+/**
+ * Signed URLs last an hour but we cache them for 55 minutes, so scrolling a
+ * journal entry does not ask the server for the same photo again.
+ */
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
 export async function getProofSignedUrl(
   path: string,
   expiresInSeconds = 3600,
 ): Promise<string | null> {
+  const cached = signedUrlCache.get(path);
+  if (cached && cached.expiresAt > Date.now()) return cached.url;
+
   const { data, error } = await supabase.storage
     .from(PROOF_BUCKET)
     .createSignedUrl(path, expiresInSeconds);
 
-  if (error) return null;
-  return data?.signedUrl ?? null;
+  if (error || !data?.signedUrl) return null;
+
+  signedUrlCache.set(path, {
+    url: data.signedUrl,
+    // Refresh five minutes before the link actually expires.
+    expiresAt: Date.now() + Math.max(expiresInSeconds - 300, 60) * 1000,
+  });
+
+  return data.signedUrl;
 }
 
 export async function deleteProof(path: string): Promise<void> {
+  signedUrlCache.delete(path);
   const { error } = await supabase.storage.from(PROOF_BUCKET).remove([path]);
   if (error) throw error;
 }
@@ -114,4 +180,6 @@ export async function deleteAllProofsForUser(userId: string): Promise<void> {
   if (paths.length > 0) {
     await supabase.storage.from(PROOF_BUCKET).remove(paths);
   }
+
+  signedUrlCache.clear();
 }

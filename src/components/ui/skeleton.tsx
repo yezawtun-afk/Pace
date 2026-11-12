@@ -7,11 +7,13 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Radius } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/lib/use-theme';
 
 /**
  * A simple pulsing placeholder block. Use it while data loads instead of a
- * spinner, so the screen keeps its shape.
+ * spinner, so the screen keeps its shape. The pulse stops when the person has
+ * asked for less motion; the block stays visible at a steady tone.
  */
 export function Skeleton({
   width,
@@ -23,11 +25,17 @@ export function Skeleton({
   radius?: number;
 }) {
   const { colors } = useTheme();
-  const opacity = useSharedValue(0.4);
+  const reducedMotion = useReducedMotion();
+  const opacity = useSharedValue(reducedMotion ? 0.7 : 0.4);
 
   useEffect(() => {
+    if (reducedMotion) {
+      opacity.value = 0.7;
+      return;
+    }
+
     opacity.value = withRepeat(withTiming(0.9, { duration: 900 }), -1, true);
-  }, [opacity]);
+  }, [opacity, reducedMotion]);
 
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
 

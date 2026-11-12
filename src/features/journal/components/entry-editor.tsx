@@ -10,6 +10,7 @@ import { AppText } from '@/components/ui/text';
 import { JOURNAL_PROMPTS } from '@/constants/prompts';
 import { FontSerif, Radius, Space } from '@/constants/theme';
 import { friendlyDataError } from '@/features/auth/errors';
+import { ProofStrip } from '@/features/proofs/components/proof-strip';
 import { fromDateString } from '@/lib/dates';
 import { useTheme } from '@/lib/use-theme';
 import type { JournalEntry, Tag } from '@/types/database';
@@ -54,11 +55,13 @@ function toEntryDraft(draft: Draft, date: string): EntryDraft {
 
 type EntryEditorProps = {
   visible: boolean;
-  /** "yyyy-MM-dd" — the day this entry belongs to. */
+  /** "yyyy-MM-dd" - the day this entry belongs to. */
   date: string;
   entry: JournalEntry | null;
   initialTagIds: string[];
   allTags: Tag[];
+  /** Proof photos for this day, oldest first. */
+  proofPaths?: string[];
   onClose: () => void;
 };
 
@@ -75,6 +78,7 @@ export function EntryEditor({
   entry,
   initialTagIds,
   allTags,
+  proofPaths,
   onClose,
 }: EntryEditorProps) {
   const { colors } = useTheme();
@@ -253,6 +257,10 @@ export function EntryEditor({
         </>
       }>
       <MoodPicker value={draft.mood} onChange={(mood) => update({ mood })} />
+
+      {proofPaths && proofPaths.length > 0 ? (
+        <ProofStrip paths={proofPaths} label="Photos from this day" />
+      ) : null}
 
       <View
         style={{

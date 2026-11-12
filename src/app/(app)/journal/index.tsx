@@ -31,6 +31,10 @@ import {
   wordCount,
 } from '@/features/journal/journal';
 import { useJournalEntries, useJournalEntryTags, useJournalTags } from '@/features/journal/queries';
+import { useHabitLogs } from '@/features/habits/queries';
+
+/** How many entries render at once before "Show older entries". */
+const PAGE_SIZE = 40;
 
 /**
  * The journal: today's entry, a month-by-month history, search and a mood
@@ -42,8 +46,10 @@ export default function JournalScreen() {
   const entriesQuery = useJournalEntries();
   const tagsQuery = useJournalTags();
   const entryTagsQuery = useJournalEntryTags();
+  const logsQuery = useHabitLogs();
 
   const [query, setQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [editor, setEditor] = useState<{ date: string; entry: JournalEntry | null } | null>(null);
 
   const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data]);
@@ -56,11 +62,27 @@ export default function JournalScreen() {
   /** Tag names per entry, computed once per fetch instead of per card. */
   const namesByEntry = useMemo(() => tagNamesByEntry(links, tags), [links, tags]);
 
+  /** Proof photo paths grouped by day, for the entry editor. */
+  const proofsByDate = useMemo(() => {
+    const map = new Map<string, string[]>();
+
+    for (const log of logsQuery.data ?? []) {
+      if (!log.proof_path) continue;
+      const paths = map.get(log.log_date) ?? [];
+      paths.push(log.proof_path);
+      map.set(log.log_date, paths);
+    }
+
+    return map;
+  }, [logsQuery.data]);
+
   const filtered = useMemo(
     () => searchEntries(entries, links, tags, query),
     [entries, links, tags, query],
   );
-  const groups = groupEntriesByMonth(filtered);
+  // Long journals render in pages so opening the tab stays quick on a phone.
+  const shown = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const groups = groupEntriesByMonth(shown);
 
   const todayEntry = entries.find((entry) => entry.entry_date === todayKey) ?? null;
   const streak = journalingStreak(entries, today);
@@ -253,7 +275,10 @@ export default function JournalScreen() {
             <TextField
               label="Search entries"
               value={query}
-              onChangeText={setQuery}
+              onChangeText={(text) => {
+                setQuery(text);
+                setVisibleCount(PAGE_SIZE);
+              }}
               placeholder="Words or a tag"
               autoCapitalize="none"
               autoCorrect={false}
@@ -287,6 +312,20 @@ export default function JournalScreen() {
               </View>
             ))
           )}
+
+          {filtered.length > visibleCount ? (
+            <View style={{ marginTop: Space.xl, alignItems: 'center', gap: Space.xs }}>
+              <Button
+                label="Show older entries"
+                variant="secondary"
+                fullWidth={false}
+                onPress={() => setVisibleCount((count) => count + PAGE_SIZE)}
+              />
+              <AppText variant="caption" tone="tertiary">
+                Showing {visibleCount} of {filtered.length}
+              </AppText>
+            </View>
+          ) : null}
         </>
       )}
 
@@ -297,6 +336,7 @@ export default function JournalScreen() {
           entry={editor.entry}
           initialTagIds={tagIdsFor(editor.entry)}
           allTags={tags}
+          proofPaths={proofsByDate.get(editor.date) ?? []}
           onClose={() => setEditor(null)}
         />
       ) : null}

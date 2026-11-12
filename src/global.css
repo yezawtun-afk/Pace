@@ -23,10 +23,15 @@ body {
   box-sizing: border-box;
 }
 
-/* Visible focus ring for keyboard users on the web. */
+/* Visible focus ring for keyboard users on the web. Matches `accent` in
+   src/constants/theme.ts (CSS cannot import the TS token). */
 *:focus-visible {
-  outline: 2px solid #D9593D;
+  outline: 2px solid #C4472E;
   outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(196, 71, 46, 0.22);
 }
 
 @media (prefers-reduced-motion: reduce) {

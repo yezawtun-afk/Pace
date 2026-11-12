@@ -8,6 +8,8 @@ import { FlameIcon } from '@/components/ui/icons';
 import { Sheet } from '@/components/ui/sheet';
 import { AppText } from '@/components/ui/text';
 import { Radius, Space } from '@/constants/theme';
+import { ProofViewer } from '@/features/proofs/components/proof-viewer';
+import { useProofUrl } from '@/features/proofs/queries';
 import { useTheme } from '@/lib/use-theme';
 import type { Habit } from '@/types/database';
 
@@ -22,6 +24,8 @@ type HabitDetailProps = {
   /** "yyyy-MM-dd" keys of the days this habit was done. */
   done: Set<string>;
   today: Date;
+  /** "yyyy-MM-dd" → storage path, for days with a proof photo. */
+  proofs?: Map<string, string>;
   onClose: () => void;
   onEdit: () => void;
   onToggleDay: (date: string) => void;
@@ -43,6 +47,7 @@ export function HabitDetail({
   habit,
   done,
   today,
+  proofs,
   onClose,
   onEdit,
   onToggleDay,
@@ -53,6 +58,8 @@ export function HabitDetail({
   const { colors } = useTheme();
   const [month, setMonth] = useState(() => startOfMonth(today));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [viewerPath, setViewerPath] = useState<string | null>(null);
+  const viewerUrl = useProofUrl(viewerPath).data ?? null;
 
   const streak = currentStreak(habit, done, today);
   const buckets = weekBuckets(habit, done, today, 8);
@@ -132,12 +139,18 @@ export function HabitDetail({
           habit={habit}
           month={month}
           done={done}
+          proofs={proofs}
           today={today}
           onChangeMonth={setMonth}
           onToggleDay={onToggleDay}
+          onOpenProof={(date) => {
+            const path = proofs?.get(date);
+            if (path) setViewerPath(path);
+          }}
         />
         <AppText variant="caption" tone="tertiary">
-          Tap any past day to check it in or clear it. Filled squares are days you did it.
+          Tap any past day to check it in or clear it. Filled squares are days you did it; a dot
+          marks a day with a photo.
         </AppText>
       </View>
 
@@ -174,6 +187,10 @@ export function HabitDetail({
           onPress={() => setConfirmDelete(true)}
         />
       )}
+
+      {viewerPath ? (
+        <ProofViewer visible uri={viewerUrl} onClose={() => setViewerPath(null)} />
+      ) : null}
     </Sheet>
   );
 }

@@ -15,6 +15,8 @@ import { Space } from '@/constants/theme';
 import { friendlyDataError } from '@/features/auth/errors';
 import { useHabitLogs, useHabits } from '@/features/habits/queries';
 import { habitsForToday } from '@/features/today/summary';
+import { ProofStrip } from '@/features/proofs/components/proof-strip';
+import { successFeedback } from '@/lib/haptics';
 import { MoodPicker } from '@/features/journal/components/mood-picker';
 import { TagPicker } from '@/features/journal/components/tag-picker';
 import { promptForDate } from '@/features/journal/journal';
@@ -143,6 +145,12 @@ export default function ReviewScreen() {
         .map((link) => link.tag_id)
     : [];
 
+  // A handful of paths, so no memo: the list is rebuilt only when ReviewScreen
+  // re-renders, which happens once per query change.
+  const todayProofs = (logsQuery.data ?? [])
+    .filter((log) => log.log_date === todayKey && log.proof_path)
+    .map((log) => log.proof_path as string);
+
   return (
     <ReviewFlow
       today={today}
@@ -152,6 +160,7 @@ export default function ReviewScreen() {
       habits={habitsForToday(habitsQuery.data ?? [], doneByHabit, today)}
       tasks={tasksQuery.data ?? []}
       tags={tagsQuery.data ?? []}
+      todayProofs={todayProofs}
     />
   );
 }
@@ -164,6 +173,8 @@ type ReviewFlowProps = {
   habits: TodayHabit[];
   tasks: Task[];
   tags: Tag[];
+  /** Proof photos added today, oldest first. */
+  todayProofs: string[];
 };
 
 function ReviewFlow({
@@ -174,6 +185,7 @@ function ReviewFlow({
   habits,
   tasks,
   tags,
+  todayProofs,
 }: ReviewFlowProps) {
   const { colors } = useTheme();
 
@@ -273,6 +285,7 @@ function ReviewFlow({
 
       await saveTags.mutateAsync({ entryId: row.id, tagIds });
 
+      successFeedback();
       router.replace('/journal');
     } catch (cause) {
       setSaving(false);
@@ -333,6 +346,10 @@ function ReviewFlow({
               </View>
             </View>
           </Card>
+
+          {todayProofs.length > 0 ? (
+            <ProofStrip paths={todayProofs} label="Photos from today" />
+          ) : null}
 
           {missedHabits.length > 0 || openTasks.length > 0 ? (
             <View style={{ gap: Space.sm }}>

@@ -15,9 +15,12 @@ type MonthHeatmapProps = {
   /** Any date inside the month being shown. */
   month: Date;
   done: Set<string>;
+  /** "yyyy-MM-dd" → storage path, for days with a proof photo. */
+  proofs?: Map<string, string>;
   today: Date;
   onChangeMonth: (month: Date) => void;
   onToggleDay: (date: string) => void;
+  onOpenProof?: (date: string) => void;
 };
 
 /**
@@ -25,15 +28,18 @@ type MonthHeatmapProps = {
  *
  * Filled = done, outlined = a scheduled day that was missed, faint = a rest day
  * or a day still in the future. Any past day can be tapped, which is how
- * back-filling works.
+ * back-filling works. A small dot marks days with a proof photo; tapping one
+ * opens the photo instead of toggling the day.
  */
 export function MonthHeatmap({
   habit,
   month,
   done,
+  proofs,
   today,
   onChangeMonth,
   onToggleDay,
+  onOpenProof,
 }: MonthHeatmapProps) {
   const { colors } = useTheme();
   const weeks = monthWeeks(month);
@@ -83,6 +89,7 @@ export function MonthHeatmap({
             const isFuture = day > today;
             const dayDone = done.has(key);
             const scheduled = isScheduledOn(habit, day);
+            const proof = proofs?.get(key);
 
             const background = dayDone
               ? habit.color
@@ -101,7 +108,7 @@ export function MonthHeatmap({
             return (
               <Pressable
                 key={key}
-                onPress={() => onToggleDay(key)}
+                onPress={() => (proof && onOpenProof ? onOpenProof(key) : onToggleDay(key))}
                 disabled={isFuture}
                 accessibilityRole="button"
                 accessibilityLabel={`${format(day, 'EEEE d MMMM')}, ${
@@ -112,7 +119,7 @@ export function MonthHeatmap({
                       : scheduled
                         ? 'not done'
                         : 'rest day'
-                }`}
+                }${proof ? ', has a photo' : ''}`}
                 accessibilityState={{ selected: dayDone, disabled: isFuture }}
                 style={({ pressed }) => ({
                   flex: 1,
@@ -141,6 +148,20 @@ export function MonthHeatmap({
                     style={{ opacity: inMonth ? 1 : 0.35 }}>
                     {format(day, 'd')}
                   </AppText>
+
+                  {proof ? (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        right: 3,
+                        bottom: 3,
+                        width: 5,
+                        height: 5,
+                        borderRadius: 2.5,
+                        backgroundColor: dayDone ? '#FFFFFF' : colors.accent,
+                      }}
+                    />
+                  ) : null}
                 </View>
               </Pressable>
             );

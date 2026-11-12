@@ -1,9 +1,11 @@
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
+import { memo } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Card } from '@/components/ui/card';
 import { AppText } from '@/components/ui/text';
 import { FontSerif, Radius, Space } from '@/constants/theme';
+import { pointerCursor, type PressableState } from '@/lib/web';
 import { useTheme } from '@/lib/use-theme';
 import type { JournalEntry } from '@/types/database';
 
@@ -24,7 +26,7 @@ export function entryDateLabel(entryDate: string): string {
 }
 
 /** One day in the history: date, mood, title or opening lines, tags. */
-export function EntryCard({ entry, tagNames, onOpen }: EntryCardProps) {
+export const EntryCard = memo(function EntryCard({ entry, tagNames, onOpen }: EntryCardProps) {
   const { colors } = useTheme();
   const emoji = moodEmoji(entry.mood);
   const preview = entryPreview(entry.body, 160);
@@ -38,11 +40,15 @@ export function EntryCard({ entry, tagNames, onOpen }: EntryCardProps) {
         accessibilityLabel={`${entryDateLabel(entry.entry_date)}${
           entry.title ? `, ${entry.title}` : ''
         }. Open entry.`}
-        style={({ pressed }) => ({
-          padding: Space.xl,
-          gap: Space.sm,
-          opacity: pressed ? 0.7 : 1,
-        })}>
+        style={({ pressed, hovered }: PressableState) => [
+          pointerCursor,
+          {
+            padding: Space.xl,
+            gap: Space.sm,
+            backgroundColor: hovered ? colors.surfaceMuted : 'transparent',
+            opacity: pressed ? 0.7 : 1,
+          },
+        ]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.sm }}>
           <AppText variant="smallStrong" style={{ flex: 1 }}>
             {entryDateLabel(entry.entry_date)}
@@ -109,4 +115,4 @@ export function EntryCard({ entry, tagNames, onOpen }: EntryCardProps) {
       </Pressable>
     </Card>
   );
-}
+});

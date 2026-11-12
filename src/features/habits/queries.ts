@@ -16,6 +16,7 @@ import {
   fetchHabitLogs,
   fetchHabits,
   setHabitDone,
+  setHabitLogProof,
   updateHabit,
   type HabitDraft,
 } from './api';
@@ -75,6 +76,29 @@ export function useDeleteHabit() {
     mutationFn: (id: string) => deleteHabit(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: habitKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: habitKeys.logs() });
+    },
+  });
+}
+
+/**
+ * Attaches (or clears) the proof photo path on one day's log, then refreshes
+ * the log list so the thumbnail appears on the row and in the calendar.
+ */
+export function useSetHabitLogProof() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      habitId,
+      date,
+      proofPath,
+    }: {
+      habitId: string;
+      date: string;
+      proofPath: string | null;
+    }) => setHabitLogProof(habitId, date, proofPath),
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: habitKeys.logs() });
     },
   });

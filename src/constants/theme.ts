@@ -6,8 +6,10 @@
  * hook hand back a single typed object.
  *
  * The accent is a warm terracotta. `accent` is the version that is readable on
- * the app background (contrast >= 4.5:1), `accentSoft` is the tinted surface
- * used for active states and highlights.
+ * the app background and carries white text at a 4.5:1 ratio or better,
+ * `accentHover` is one step darker for the web hover state, and `accentSoft`
+ * is the tinted surface used for active states and highlights. Small text on
+ * `accentSoft` uses `text`, not `accent`, so the tint never lowers contrast.
  */
 
 import { Platform } from 'react-native';
@@ -28,7 +30,9 @@ const light = {
   text: '#1C1917',
   textSecondary: '#57534E',
   textTertiary: '#78716C',
-  accent: '#D9593D',
+  // #C4472E: 4.63:1 on the paper background and 4.90:1 behind white text.
+  accent: '#C4472E',
+  accentHover: '#AC3B25',
   accentText: '#FFFFFF',
   accentSoft: '#FBE9E4',
   accentBorder: '#F0C4B8',
@@ -56,6 +60,7 @@ const dark = {
   textSecondary: '#C4BDB3',
   textTertiary: '#9C958A',
   accent: '#E87A5F',
+  accentHover: '#F0927B',
   accentText: '#1C1917',
   accentSoft: '#3A2620',
   accentBorder: '#5A3A32',
@@ -107,6 +112,17 @@ export const Layout = {
   tabBarHeight: 58,
   /** Minimum tap target on every interactive element. */
   minTapTarget: 44,
+} as const;
+
+/**
+ * Motion durations in milliseconds. Nothing in the app animates for longer than
+ * 250ms; anything longer starts to feel like waiting. Screens skip these when
+ * the person has asked for less motion (see `useReducedMotion`).
+ */
+export const Motion = {
+  fast: 120,
+  base: 180,
+  slow: 240,
 } as const;
 
 /** System font stack, with Inter first on web when the user has it installed. */

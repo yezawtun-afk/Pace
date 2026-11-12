@@ -16,7 +16,8 @@ policies, indexes, updated_at triggers, `handle_new_user()` profile trigger,
 clearing, sign-up / sign-in / sign-out / password reset, three-step onboarding, route guards via
 `Stack.Protected`. Docs live in `supabase/README.md`.
 
-Next phases, in order: 9 release.
+Next phases, in order: none — all nine phases shipped, plus a second round (A–E) of design and
+polish work described at the end of this section.
 
 Phase 3 (tasks) is done: `src/features/tasks/` (`keys.ts`, `grouping.ts` pure logic, `api.ts`,
 `queries.ts`), `TaskRow`, `DateField` (presets + month calendar), `QuickAdd`, `TaskEditor` sheet,
@@ -96,13 +97,59 @@ Guest mode (anonymous sign-in) sits on top of phase 2: `signInAsGuest()` in
 sign-in screen, and an Account card in Settings whose sheet calls `upgradeGuestAccount()` —
 `updateUser()` on the current user, so the guest keeps their rows, plus a follow-up write to
 `profiles.display_name` (the sign-up trigger only runs once). Needs **Anonymous sign-ins**
-enabled in the dashboard; if it is off the error message says so. `signOut()` still has no UI, so a
-guest cannot lock themselves out yet — phase 7 (account settings) must add a warning there.
+enabled in the dashboard; if it is off the error message says so. Signing out of a guest warns
+first (Settings → Account), so a guest cannot lock themselves out silently.
 
-Accessibility gap found while testing web: React Native Web 0.21 does not turn
-`accessibilityState={{ checked }}` into `aria-checked`, so the checkbox state is only carried by
-the changing label ("mark … as done" / "as not done"). Add the `aria-*` props next to
-`accessibilityState` in `Checkbox`, `Chip` and `SegmentedControl` during phase 8.
+Accessibility gap found while testing web (fixed in phase 8): React Native Web 0.21 does not turn
+`accessibilityState={{ checked }}` into `aria-checked`, so the `aria-*` props now sit next to every
+`accessibilityState` in `Checkbox`, `Chip`, `SegmentedControl`, `MoodPicker` and the nav tabs.
+
+### Round 2 (design + polish), phases A–E
+
+**A. Design tokens** (`f91c073`): `src/constants/theme.ts` rewritten — warm paper light palette
+(`#FBF8F4`), warm charcoal dark, ink `#1C1917`, a single terracotta accent, `accentHover` for web
+hover, a 12/14/16/20/28 type scale, radii 10–12. Lora is loaded in `src/app/_layout.tsx` and used
+through `FontSerif` for journal body and large titles; `FontFamily` (Inter/system) carries the UI.
+The nav uses a soft pill behind the active tab.
+
+**B. Today** (`bf74d80`): `todayProgress()` now feeds a `ProgressBar`, rows were rebuilt
+(`TodayHabitRow`, `TaskRow`), a floating **+** opens quick entry, the empty day is one line plus
+one button, and loading uses `Skeleton` blocks.
+
+**C. Copy + screens** (`a7a8f63`): taglines and slogans removed, copy cut to plain sentences, and
+the token system applied to habits, media, settings, tasks and auth screens. `src/global.css` gained
+the web focus ring and reduced-motion block.
+
+**D. Proof photos** (`b7e1072`): `0002_proof_photos.sql` adds `habits.ask_for_proof`,
+`habit_logs.proof_path`, `tasks.proof_path`, the private `proofs` bucket and its storage policies
+(`(storage.foldername(name))[1] = auth.uid()::text`). `src/features/proofs/` holds `paths.ts`
+(+ tests), `api.ts`, `queries.ts`, `ProofThumbnail`, `ProofViewer`. Photos are resized to 1080 px
+long side, JPEG 0.7, refused above 2 MB; the stored value is a path, never a URL.
+
+**E. Polish** (this phase):
+- `Motion` tokens (`fast 120`, `base 180`, `slow 240`) — nothing animates longer than 250 ms.
+- `src/hooks/use-reduced-motion.ts` (web `matchMedia`, native `AccessibilityInfo`); fades and the
+  skeleton pulse are skipped when it is on. `src/lib/haptics.ts` (`tapFeedback`, `successFeedback`)
+  is the only haptics caller and no-ops on web.
+- `src/lib/web.ts` (`PressableState`, `pointerCursor`, `isWeb`); hover tints + pointer cursors on
+  Button, TextLink, Chip, nav items, `TaskRow`, `TodayHabitRow`, `EntryCard`.
+- `src/hooks/use-keyboard-shortcuts.ts` (`n` new task, `q` quick add, ignored in fields; pure
+  `isTypingTarget` is tested). `src/components/ui/progress-bar.tsx`.
+- Proof flow on Today: permission on tap, denial message + **Open settings**, compression, upload,
+  **Retry upload** keeping the file, replace/remove from the viewer (old object deleted), and
+  `useSetHabitLogProof` invalidates the log list. Task editor got the same permission and
+  replace/remove handling. `ProofStrip` shows photos in the review and the journal entry; the
+  habit calendar shows a dot per photo day; `TaskRow` shows an image icon.
+- Accent darkened to `#C4472E` (4.63:1 on paper, 4.90:1 behind white); selected chips use
+  `colors.text` on `accentSoft` with an `accent` border. `scripts/contrast.mjs` is a one-off audit
+  tool (safe to delete or keep).
+- Journal history paginates at 40 (`PAGE_SIZE`); `Card` clips its children (`overflow: 'hidden'`);
+  `TaskRow`, `TodayHabitRow` and `EntryCard` are `memo`ised. `npm test` is 76 checks.
+
+Storage notes: `expo-image-picker` uses `mediaTypes: ['images']`; `expo-image-manipulator` must be
+used through `ImageManipulator.manipulate(uri)` → `.resize()`/`.renderAsync()`/`.saveAsync()`
+(`manipulateAsync` is deprecated). EXIF/GPS stripping is by construction (pixels are re-encoded);
+`TESTING.md` has the `exiftool` check.
 
 ### Auth architecture (phase 2)
 
@@ -117,7 +164,8 @@ the changing label ("mark … as done" / "as not done"). Add the `aria-*` props 
 - Recovery links: on web supabase-js reads the URL itself; on native `acceptRecoveryLink(url)`
   turns the `pace://` deep link into a session (`setSession` / `exchangeCodeForSession` /
   `verifyOtp`).
-- The theme is still local (Zustand). `profiles.theme` exists and is reserved for phase 7 sync.
+- The theme is local (Zustand) for the first paint and mirrored to `profiles.theme` by
+  `useThemeSync()` so other devices pick it up.
 
 ## Stack (do not swap without asking)
 
@@ -129,21 +177,24 @@ the changing label ("mark … as done" / "as not done"). Add the `aria-*` props 
 | Server state   | TanStack Query (single client in `src/lib/query-client.ts`)            |
 | Local UI state | Zustand + AsyncStorage (`src/lib/preferences.ts`)                      |
 | Dates          | date-fns; `date` columns are the user's local calendar day             |
-| Graphics       | react-native-svg (icons, progress ring, later charts)                  |
-| Quality        | ESLint (expo flat config) + Prettier, `tsc --noEmit`                   |
+| Graphics       | react-native-svg (icons, charts), expo-image for photos                |
+| Motion & touch | Reanimated, react-native-gesture-handler, expo-haptics                 |
+| Quality        | ESLint (expo flat config) + Prettier, `tsc --noEmit`, Jest             |
 
 ## Folder map
 
 ```
 src/app/            routes only, one file per screen, _layout.tsx per navigator
-src/components/     shared UI (ui/ holds primitives: text, card, screen, icons, …)
+src/components/     shared UI (ui/ holds primitives: text, card, screen, progress bar, icons, …)
 src/components/app-shell.tsx   navigation chrome + NAV_ITEMS (single source of truth)
-src/features/       per-feature api.ts / keys.ts / hooks / components (auth, onboarding, …)
-src/lib/            supabase client, query client, preferences, env, dates/time helpers, theme
+src/features/       per-feature api.ts / keys.ts / hooks / components (auth, onboarding, tasks,
+                    habits, today, journal, proofs, export)
+src/lib/            supabase client, query client, preferences, env, dates/time helpers, theme,
+                    haptics, web helpers
 src/constants/      design tokens (theme.ts), static content (prompts, starter habits)
-src/hooks/          small reusable hooks
+src/hooks/          small reusable hooks (online, wide layout, reduced motion, shortcuts)
 src/types/          database.ts (must match the SQL) + local env types
-supabase/           migrations/0001_initial_schema.sql + README with dashboard steps
+supabase/           migrations/0001_initial_schema.sql, 0002_proof_photos.sql + README
 ```
 
 ## Conventions
@@ -160,10 +211,19 @@ supabase/           migrations/0001_initial_schema.sql + README with dashboard s
   "Today" is always computed with the device timezone. Tests for this logic live next to the pure
   functions so they can run in Jest without React.
 - **Accessibility.** 44×44 minimum tap targets, `accessibilityLabel` on icon-only controls,
-  `accessibilityState` for selection, and never colour alone to carry meaning.
+  `accessibilityState` (with matching `aria-*` on web) for selection, and never colour alone to
+  carry meaning.
+- **Motion.** Durations come from `Motion` in the tokens and stay under 250 ms. Read
+  `useReducedMotion()` before adding a fade or a loop. Haptics go through
+  `src/lib/haptics.ts` — never call `expo-haptics` directly from a screen.
+- **Web extras.** Any pressable that should feel clickable takes `pointerCursor` and a
+  `hovered` tint via the `PressableState` type in `src/lib/web.ts`. Global shortcuts live in
+  `useKeyboardShortcuts` and must never fire while a field has focus.
+- **Photos.** Store a path, never a URL; render through `useProofUrl(path)` so signed URLs are
+  shared and cached. Delete the storage object whenever the row stops pointing at it.
 - **Secrets.** Only `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` reach the app.
-  The service-role key is never used client-side; account deletion will use a `SECURITY DEFINER`
-  SQL function instead.
+  The service-role key is never used client-side; account deletion goes through a
+  `SECURITY DEFINER` SQL function instead.
 
 ## Commands
 
@@ -176,7 +236,7 @@ npm run typecheck        # tsc --noEmit
 npm run lint             # expo lint (ESLint + Prettier rules)
 npm run lint:fix         # auto-fix what can be fixed
 npm run format           # prettier --write .
-npm test                 # jest (pure habit, Today and journal logic)
+npm test                 # jest (76 checks: habits, Today, journal, proofs, shortcuts)
 npm run export:web       # static web build into dist/
 ```
 

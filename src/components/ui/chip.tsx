@@ -3,6 +3,7 @@ import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AppText } from '@/components/ui/text';
 import { Layout, Radius, Space } from '@/constants/theme';
+import { pointerCursor, type PressableState } from '@/lib/web';
 import { useTheme } from '@/lib/use-theme';
 
 type ChipProps = {
@@ -38,20 +39,27 @@ export function Chip({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected, disabled }}
       aria-pressed={selected}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Space.sm - 2,
-        minHeight: Layout.minTapTarget,
-        paddingHorizontal: Space.md + 2,
-        borderRadius: Radius.pill,
-        borderWidth: 1,
-        borderColor: selected ? colors.accentBorder : colors.border,
-        backgroundColor: selected ? colors.accentSoft : colors.surface,
-        opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
-      })}>
+      style={({ pressed, hovered }: PressableState) => [
+        pointerCursor,
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: Space.sm - 2,
+          minHeight: Layout.minTapTarget,
+          paddingHorizontal: Space.md + 2,
+          borderRadius: Radius.pill,
+          borderWidth: 1,
+          borderColor: selected ? colors.accent : colors.border,
+          backgroundColor: selected
+            ? colors.accentSoft
+            : hovered && !disabled
+              ? colors.surfaceMuted
+              : colors.surface,
+          opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
+        },
+      ]}>
       {leading}
-      <AppText variant="small" color={selected ? colors.accent : colors.textSecondary}>
+      <AppText variant="small" color={selected ? colors.text : colors.textSecondary}>
         {label}
       </AppText>
     </Pressable>

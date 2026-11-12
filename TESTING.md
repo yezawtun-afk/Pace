@@ -6,7 +6,7 @@ Run through this before every release. Mark each item done on the target platfor
 - [ ] `npm install`
 - [ ] `npm run typecheck` (tsc --noEmit) passes
 - [ ] `npm run lint` passes
-- [ ] `npm test` passes (67 checks)
+- [ ] `npm test` passes (76 checks)
 - [ ] `npx expo-doctor` reports no issues
 - [ ] `npm run export:web` succeeds and `dist/` loads in a browser
 
@@ -26,7 +26,7 @@ Run through this before every release. Mark each item done on the target platfor
 - [ ] Deleting an account removes all data and returns to sign-in
 
 ## Today
-- [ ] Progress ring counts habits + tasks due today or overdue
+- [ ] Progress bar counts habits + tasks due today or overdue
 - [ ] Habits due today show with streaks; rest-day check-ins appear marked
 - [ ] Overdue tasks appear in their own group
 - [ ] Quick add creates a task on today
@@ -65,6 +65,38 @@ Run through this before every release. Mark each item done on the target platfor
 - [ ] Export JSON and CSV produce files
 - [ ] Sign out and delete account work
 
+## Proof photos
+
+Apply `supabase/migrations/0002_proof_photos.sql` first. Run these on Android **and** web.
+
+- [ ] Habit without "Ask for a photo": checking it off shows no sheet
+- [ ] Habit with the toggle on: checking off opens the sheet; **Skip** keeps the check-off
+- [ ] Camera and Gallery both work (Gallery/file picker only on web)
+- [ ] Thumbnail appears on the Today row and opens the viewer; pinch/double-tap zoom works
+- [ ] Habit calendar shows a dot on that day; tapping the day opens the photo
+- [ ] Replace from the viewer swaps the photo and the old file is gone from Storage
+- [ ] Remove from the viewer clears the row and deletes the file
+- [ ] Task editor: Add / Replace / Remove photo, and an image icon on the task row
+- [ ] Photo strip appears in the evening review and in that day's journal entry
+- [ ] A 12 MP photo ends up around or under 500 KB and still looks sharp
+- [ ] A file over 2 MB after compression is refused with a plain message
+- [ ] Airplane mode during upload: check-off is saved, **Retry upload** succeeds on reconnect
+- [ ] Permission denied shows one sentence plus **Open settings** (native), picker message on web
+- [ ] User A cannot open user B's path, even pasted directly into `createSignedUrl`
+- [ ] Deleting the account removes every object under the user's folder
+
+**EXIF check (one minute, native):** take a photo with location on, attach it as proof, download
+the object from Supabase Storage, then run `exiftool photo.jpg`. Expect no `GPS`, `Make`, `Model`
+or `DateTimeOriginal` tags — only the JPEG basics the encoder wrote. This is by construction (the
+manipulator decodes to pixels and writes a new file), and this check is the proof.
+
+## Keyboard and motion (web)
+
+- [ ] `n` opens a new task, `q` opens quick entry, and neither fires while typing in a field
+- [ ] Focus rings are visible when tabbing; buttons and rows show a hover tint and pointer cursor
+- [ ] With "reduce motion" on, empty states appear instantly and skeletons stop pulsing
+- [ ] Journal history loads 40 entries and "Show older entries" adds more
+
 ## Sync and offline
 - [ ] Two tabs: a change in one appears in the other (Realtime enabled)
 - [ ] Airplane mode: check-off queues and replays on reconnect
@@ -73,7 +105,9 @@ Run through this before every release. Mark each item done on the target platfor
 ## Accessibility
 - [ ] Screen readers announce checkbox, chip and segmented-control state
 - [ ] All tap targets are at least 44 px
-- [ ] Contrast is at least 4.5:1 in light and dark
+- [ ] Contrast is at least 4.5:1 in light and dark (accent text and buttons included)
+- [ ] Dynamic type up to 200% does not clip labels in the nav or Today rows
+- [ ] Check-off and review save give a light haptic on a real device
 
 ## Platforms
 - [ ] Web (Chrome, Safari, Firefox)
