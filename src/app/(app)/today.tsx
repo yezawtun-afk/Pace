@@ -27,7 +27,12 @@ import { QuickAdd } from '@/features/tasks/components/quick-add';
 import { TaskEditor } from '@/features/tasks/components/task-editor';
 import { TaskRow } from '@/features/tasks/components/task-row';
 import { groupTasks, todayString } from '@/features/tasks/grouping';
-import { useCategories, useSetTaskCompleted, useTasks } from '@/features/tasks/queries';
+import {
+  useCategories,
+  useDeleteTask,
+  useSetTaskCompleted,
+  useTasks,
+} from '@/features/tasks/queries';
 import { TodayHabitRow } from '@/features/today/components/today-habit-row';
 import { greetingFor, greetingName, habitsForToday, todayProgress } from '@/features/today/summary';
 import { ProofThumbnail } from '@/features/proofs/components/proof-thumbnail';
@@ -65,6 +70,7 @@ export default function TodayScreen() {
 
   const toggleHabitDay = useToggleHabitDay();
   const setTaskCompleted = useSetTaskCompleted();
+  const deleteTask = useDeleteTask();
 
   const name = greetingName(profileQuery.data?.display_name ?? null);
   const greeting = greetingFor(today);
@@ -430,6 +436,7 @@ export default function TodayScreen() {
                         });
                       }}
                       onOpen={() => openEditor(task)}
+                      onDelete={() => deleteTask.mutate(task.id)}
                       last={index === taskRows.length - 1}
                     />
                   ))}

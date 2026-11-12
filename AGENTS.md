@@ -144,7 +144,32 @@ long side, JPEG 0.7, refused above 2 MB; the stored value is a path, never a URL
   `colors.text` on `accentSoft` with an `accent` border. `scripts/contrast.mjs` is a one-off audit
   tool (safe to delete or keep).
 - Journal history paginates at 40 (`PAGE_SIZE`); `Card` clips its children (`overflow: 'hidden'`);
-  `TaskRow`, `TodayHabitRow` and `EntryCard` are `memo`ised. `npm test` is 76 checks.
+  `TaskRow`, `TodayHabitRow` and `EntryCard` are `memo`ised. `npm test` is 83 checks.
+
+### Round 3 (phase F), release pass
+
+- **Native offline detection**: `@react-native-community/netinfo`; `src/lib/network.ts`'s
+  `startNetworkWatcher()` (idempotent, called once from the root layout) feeds
+  `onlineManager.setEventListener`, so `useIsOnline()` and the offline banner work on phones, not
+  just on the web. `isInternetReachable === null` counts as online.
+- **Habit icons are SVG now**: sixteen line glyphs (`WalkIcon`, `RunIcon`, `BookIcon`, …) live in
+  `src/components/ui/icons.tsx` and are drawn through `HabitGlyph`. `HABIT_ICON_KEYS` in
+  `src/constants/habits.ts` is the stored value list (`'leaf'`, `'walk'`, …); existing rows still
+  hold an emoji, so `habitIconKey()` maps it and the editor upgrades the row on the next save.
+  Never rename a key — old rows would go blank.
+- **Shortcut rule extracted**: `shortcutKey(event)` in `src/hooks/use-keyboard-shortcuts.ts` is pure
+  and tested (modifiers, text fields, `defaultPrevented`, shift allowed). The listener just calls it.
+- **Swipe to delete**: `TaskRow` takes an optional `onDelete`; on native it wraps the row in
+  `ReanimatedSwipeable` with a Delete panel. It is not enabled on the web (the editor's Delete
+  button is enough, and a horizontal drag would fight the pointer). The swipe never deletes on its
+  own — the panel is a button.
+- **Icons and splash from code**: `scripts/generate-icons.mjs` (`npm run icons`) renders
+  `icon.png`, the Android adaptive foreground/monochrome layers, both splash marks and the
+  favicon from one leaf path with `sharp` (dev dependency, build-time only). `app.json` uses
+  `#C4472E` for the adaptive background and `#FBF8F4` / `#1C1917` for the splash, and sets
+  `ios.config.usesNonExemptEncryption: false`.
+- Nice-to-haves deliberately skipped: swapping the `ScrollView` screens to `FlatList` (lists are
+  paginated or short, and the virtualisation would fight the centred column).
 
 Storage notes: `expo-image-picker` uses `mediaTypes: ['images']`; `expo-image-manipulator` must be
 used through `ImageManipulator.manipulate(uri)` → `.resize()`/`.renderAsync()`/`.saveAsync()`
@@ -236,8 +261,9 @@ npm run typecheck        # tsc --noEmit
 npm run lint             # expo lint (ESLint + Prettier rules)
 npm run lint:fix         # auto-fix what can be fixed
 npm run format           # prettier --write .
-npm test                 # jest (76 checks: habits, Today, journal, proofs, shortcuts)
+npm test                 # jest (83 checks: habits, Today, journal, proofs, shortcuts)
 npm run export:web       # static web build into dist/
+npm run icons            # redraw app icon, splash marks and favicon from scripts/generate-icons.mjs
 ```
 
 Always use `npx expo install <pkg>` (not `npm install`) for packages that have native code, so the

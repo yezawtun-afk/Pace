@@ -1,9 +1,10 @@
 import { memo } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dot } from '@/components/ui/chip';
-import { ImageIcon } from '@/components/ui/icons';
+import { ImageIcon, TrashIcon } from '@/components/ui/icons';
 import { AppText } from '@/components/ui/text';
 import { Space, Radius } from '@/constants/theme';
 import { shortTime } from '@/lib/time';
@@ -18,13 +19,19 @@ type TaskRowProps = {
   category?: Category;
   onToggle: () => void;
   onOpen: () => void;
+  /**
+   * Enables swipe-left-to-delete on phones. Omitted on the web, where the editor
+   * already has a Delete button and a horizontal drag would fight the pointer.
+   */
+  onDelete?: () => void;
   /** Removes the divider under the last row of a card. */
   last?: boolean;
 };
 
 /**
  * One task: a checkbox, the title, and a quiet meta line (due, time, category).
- * Tapping the row opens the editor; tapping the box checks it off.
+ * Tapping the row opens the editor; tapping the box checks it off; swiping left
+ * on a phone reveals Delete.
  *
  * Memoised because Today can re-render for unrelated reasons (a habit ticking,
  * a proof uploading) and rows should not.
@@ -34,6 +41,7 @@ export const TaskRow = memo(function TaskRow({
   category,
   onToggle,
   onOpen,
+  onDelete,
   last = false,
 }: TaskRowProps) {
   const { colors } = useTheme();
@@ -57,7 +65,7 @@ export const TaskRow = memo(function TaskRow({
     .filter(Boolean)
     .join(', ');
 
-  return (
+  const row = (
     <View
       style={{
         flexDirection: 'row',
@@ -152,7 +160,47 @@ export const TaskRow = memo(function TaskRow({
       </Pressable>
     </View>
   );
+
+  if (!onDelete || Platform.OS === 'web') {
+    return row;
+  }
+
+  return (
+    <ReanimatedSwipeable
+      friction={2}
+      rightThreshold={44}
+      overshootRight={false}
+      containerStyle={{ backgroundColor: colors.surface }}
+      renderRightActions={() => <DeleteAction onPress={onDelete} />}>
+      {row}
+    </ReanimatedSwipeable>
+  );
 });
+
+/** The panel that slides in behind a task. A tap deletes; the swipe never does. */
+function DeleteAction({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Delete task"
+      style={({ pressed }) => ({
+        width: 88,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: Space.xxs,
+        backgroundColor: colors.danger,
+        opacity: pressed ? 0.8 : 1,
+      })}>
+      <TrashIcon size={19} color={colors.accentText} />
+      <AppText variant="caption" color={colors.accentText}>
+        Delete
+      </AppText>
+    </Pressable>
+  );
+}
 
 function Separator() {
   return (

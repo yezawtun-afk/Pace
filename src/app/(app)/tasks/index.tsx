@@ -14,7 +14,12 @@ import { QuickAdd, defaultDueDateFor } from '@/features/tasks/components/quick-a
 import { TaskEditor } from '@/features/tasks/components/task-editor';
 import { TaskRow } from '@/features/tasks/components/task-row';
 import { groupTasks, type TaskView } from '@/features/tasks/grouping';
-import { useCategories, useSetTaskCompleted, useTasks } from '@/features/tasks/queries';
+import {
+  useCategories,
+  useDeleteTask,
+  useSetTaskCompleted,
+  useTasks,
+} from '@/features/tasks/queries';
 import { useTheme } from '@/lib/use-theme';
 import type { Category, Task } from '@/types/database';
 
@@ -72,6 +77,7 @@ export default function TasksScreen() {
   const tasksQuery = useTasks(view);
   const categoriesQuery = useCategories();
   const setCompleted = useSetTaskCompleted();
+  const deleteTask = useDeleteTask();
 
   const categoriesById = useMemo(() => {
     const map = new Map<string, Category>();
@@ -175,6 +181,7 @@ export default function TasksScreen() {
                     setCompleted.mutate({ taskId: task.id, completed: !task.completed })
                   }
                   onOpen={() => setEditor({ task, defaultDate: task.due_date })}
+                  onDelete={() => deleteTask.mutate(task.id)}
                 />
               ))}
             </Card>

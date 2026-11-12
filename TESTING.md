@@ -6,7 +6,7 @@ Run through this before every release. Mark each item done on the target platfor
 - [ ] `npm install`
 - [ ] `npm run typecheck` (tsc --noEmit) passes
 - [ ] `npm run lint` passes
-- [ ] `npm test` passes (76 checks)
+- [ ] `npm test` passes (83 checks)
 - [ ] `npx expo-doctor` reports no issues
 - [ ] `npm run export:web` succeeds and `dist/` loads in a browser
 
@@ -36,6 +36,8 @@ Run through this before every release. Mark each item done on the target platfor
 
 ## Habits
 - [ ] Create / edit / delete a habit (daily, chosen days, weekly target)
+- [ ] The icon picker shows all sixteen line glyphs and the choice survives a reload
+- [ ] A habit created before the icon switch still shows a glyph (legacy emoji mapping)
 - [ ] Check off today and un-check (row deleted)
 - [ ] Back-fill a past day in the heatmap
 - [ ] Streak, 7/30/90-day rates and weekly bars look right
@@ -47,6 +49,7 @@ Run through this before every release. Mark each item done on the target platfor
 - [ ] Editor: title, notes, due date presets + calendar, time, priority, category
 - [ ] Create / rename / delete a category; deleting keeps tasks
 - [ ] Checking off is optimistic and rolls back on failure
+- [ ] Swipe a task row left on a phone: Delete panel appears, tapping it removes the task
 - [ ] Sorting: date, then priority, then time
 
 ## Journal
@@ -100,7 +103,7 @@ manipulator decodes to pixels and writes a new file), and this check is the proo
 ## Sync and offline
 - [ ] Two tabs: a change in one appears in the other (Realtime enabled)
 - [ ] Airplane mode: check-off queues and replays on reconnect
-- [ ] Offline banner appears while offline
+- [ ] Offline banner appears while offline (on a phone, not just the web)
 
 ## Accessibility
 - [ ] Screen readers announce checkbox, chip and segmented-control state
@@ -115,7 +118,8 @@ manipulator decodes to pixels and writes a new file), and this check is the proo
 - [ ] iOS (Expo Go; EAS build if available)
 
 ## Store assets (phase 9)
+- [ ] `npm run icons` regenerates the same files (no visual diff)
 - [ ] App icon (1024×1024) and adaptive icon render correctly
-- [ ] Splash screen matches the theme
+- [ ] Splash screen matches the theme in light and dark
 - [ ] Screenshots captured for store listings
 - [ ] Privacy policy and support URL ready

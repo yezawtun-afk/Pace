@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 
-import { AppText } from '@/components/ui/text';
+import { HabitGlyph } from '@/components/ui/icons';
+import { DEFAULT_HABIT_ICON, habitIconKey } from '@/constants/habits';
 import { Radius } from '@/constants/theme';
 
 type HabitBadgeProps = {
@@ -10,10 +11,16 @@ type HabitBadgeProps = {
 };
 
 /**
- * The emoji tile that identifies a habit. The colour is a 15% tint of the
- * habit's own colour, so it sits on both the light and the dark surface.
+ * The tile that identifies a habit. The colour is a 15% tint of the habit's own
+ * colour, so it sits on both the light and the dark surface; the glyph is drawn
+ * in the habit colour at half the tile size.
+ *
+ * Rows created before the SVG set stored an emoji, and `habitIconKey` maps it;
+ * anything unknown falls back to the leaf rather than leaving a blank tile.
  */
 export function HabitBadge({ icon, color, size = 42 }: HabitBadgeProps) {
+  const key = habitIconKey(icon) ?? DEFAULT_HABIT_ICON;
+
   return (
     <View
       accessibilityElementsHidden
@@ -29,7 +36,7 @@ export function HabitBadge({ icon, color, size = 42 }: HabitBadgeProps) {
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-      <AppText style={{ fontSize: size * 0.45 }}>{icon ?? '🌿'}</AppText>
+      <HabitGlyph name={key} size={Math.round(size * 0.5)} color={color} />
     </View>
   );
 }

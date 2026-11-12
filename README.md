@@ -161,6 +161,7 @@ same Wi-Fi network.
 | `npm run format`                  | Format the repo with Prettier             |
 | `npm test`                        | Jest: pure habit, Today and journal logic |
 | `npm run export:web`              | Produce a static web build in `dist/`     |
+| `npm run icons`                   | Redraw every app icon and splash mark     |
 
 ## How tasks work
 
@@ -183,13 +184,15 @@ Open **Tasks** in the nav. The screen has four views over the same table:
 - **Checking off** is optimistic: the box flips immediately and rolls back if the save fails, and
   a finished task stays in Today until the day ends.
 - **Sorting** is by date (undated last), then priority, then time — the same order everywhere.
+- **Swipe to delete** on a phone: drag a row left and tap Delete. Swiping alone never deletes, and
+  the sheet still has the same action.
 
 Tasks live in the `tasks` and `categories` tables. Both are protected by row-level security, so
 each account only ever reads and writes its own rows.
 
 ## How habits work
 
-Open **Habits** in the nav. Each habit is one card: its emoji, name, schedule, current streak, its
+Open **Habits** in the nav. Each habit is one card: its icon, name, schedule, current streak, its
 last seven days as small dots, its 30-day rate, and a check box for today.
 
 - **Three schedules.** _Every day_, _Chosen days_ (pick weekdays), or _Times per week_ (a target
@@ -437,6 +440,11 @@ supabase/
   warm paper (`#FBF8F4`) and warm charcoal in dark mode.
 - One accent — terracotta — and muted P1–P4 colours. No gradients, no glow, no emoji in the
   chrome, one line-icon set drawn in SVG.
+- Habit icons are part of that set: sixteen glyphs drawn from `HabitGlyph`, stored in
+  `habits.icon` by key (`leaf`, `walk`, …). Habits created before the switch stored an emoji; the
+  app maps it to the matching glyph so nothing looks blank, and saving the habit upgrades it.
+- The app icon, adaptive layers, splash marks and favicon are drawn from one vector by
+  `npm run icons` (`scripts/generate-icons.mjs`), so the brand colour is defined once.
 - Type: Inter/system sans for the interface, Lora for the journal body and large titles. Two
   families at most, on a 12 / 14 / 16 / 20 / 28 scale.
 - The whole palette, spacing scale, radii, type sizes and motion durations live in

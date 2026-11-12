@@ -16,6 +16,7 @@ import { AppText } from '@/components/ui/text';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useProfile } from '@/features/auth/use-profile';
 import { isSupabaseConfigured } from '@/lib/env';
+import { startNetworkWatcher } from '@/lib/network';
 import { queryClient } from '@/lib/query-client';
 import { usePreferences } from '@/lib/preferences';
 import { useTheme } from '@/lib/use-theme';
@@ -43,6 +44,12 @@ export default function RootLayout() {
       }
     }, HYDRATION_TIMEOUT_MS);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Native has no browser `online` event, so NetInfo feeds TanStack Query's
+  // online manager. On the web this is a no-op.
+  useEffect(() => {
+    startNetworkWatcher();
   }, []);
 
   if (!hasHydrated || !fontsLoaded) {

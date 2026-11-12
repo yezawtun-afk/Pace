@@ -5,7 +5,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, TextLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FormMessage } from '@/components/ui/form-message';
-import { CheckIcon, HabitsIcon, JournalIcon, LeafIcon, TasksIcon } from '@/components/ui/icons';
+import {
+  CheckIcon,
+  HabitGlyph,
+  HabitsIcon,
+  JournalIcon,
+  LeafIcon,
+  TasksIcon,
+} from '@/components/ui/icons';
 import { TextField } from '@/components/ui/text-field';
 import { AppText } from '@/components/ui/text';
 import {
@@ -360,7 +367,7 @@ function HabitStep({
                   borderWidth: 1,
                   borderColor: colors.border,
                 }}>
-                <AppText style={{ fontSize: 17 }}>{habit.icon}</AppText>
+                <HabitGlyph name={habit.icon} size={19} color={habit.color} />
               </View>
 
               <View style={{ flex: 1, gap: Space.xxs }}>

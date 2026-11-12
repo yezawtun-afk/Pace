@@ -14,6 +14,36 @@ export function isTypingTarget(tagName?: string | null, isContentEditable?: bool
   return tag === 'input' || tag === 'textarea' || tag === 'select' || Boolean(isContentEditable);
 }
 
+/** The parts of a `keydown` event the shortcut rule needs. */
+export type ShortcutEvent = {
+  key: string;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  altKey?: boolean;
+  shiftKey?: boolean;
+  defaultPrevented?: boolean;
+  target?: { tagName?: string | null; isContentEditable?: boolean } | null;
+};
+
+/**
+ * Decides what a key press means: the lowercase key to run, or `null` to ignore
+ * it. Modifiers and text fields are filtered out here, in one pure function, so
+ * the behaviour is testable and the listener below stays four lines long.
+ *
+ * Shift is allowed on purpose: a capital `N` still opens a new task, which is
+ * what people actually press when their caps lock is on.
+ */
+export function shortcutKey(event: ShortcutEvent): string | null {
+  if (event.defaultPrevented) return null;
+  if (event.metaKey || event.ctrlKey || event.altKey) return null;
+  if (!event.key) return null;
+
+  const target = event.target;
+  if (isTypingTarget(target?.tagName, target?.isContentEditable)) return null;
+
+  return event.key.toLowerCase();
+}
+
 /**
  * Global keyboard shortcuts for the web. Native has no keyboard, so the hook
  * does nothing there.
@@ -35,14 +65,19 @@ export function useKeyboardShortcuts(shortcuts: ShortcutMap, enabled = true): vo
     if (typeof window === 'undefined') return;
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented) return;
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-
-      const action = latest.current[event.key.toLowerCase()];
-      if (!action) return;
-
       const target = event.target as HTMLElement | null;
-      if (isTypingTarget(target?.tagName, target?.isContentEditable)) return;
+      const key = shortcutKey({
+        key: event.key,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        defaultPrevented: event.defaultPrevented,
+        target: { tagName: target?.tagName, isContentEditable: target?.isContentEditable },
+      });
+      if (!key) return;
+
+      const action = latest.current[key];
+      if (!action) return;
 
       event.preventDefault();
       action();

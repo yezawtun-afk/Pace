@@ -4,10 +4,17 @@ import { Pressable, View } from 'react-native';
 import { Button, ButtonRow, TextLink } from '@/components/ui/button';
 import { Chip, ChipRow } from '@/components/ui/chip';
 import { FormMessage } from '@/components/ui/form-message';
+import { HabitGlyph } from '@/components/ui/icons';
 import { Sheet } from '@/components/ui/sheet';
 import { TextField } from '@/components/ui/text-field';
 import { AppText } from '@/components/ui/text';
-import { HABIT_COLORS, HABIT_ICONS } from '@/constants/habits';
+import {
+  DEFAULT_HABIT_ICON,
+  HABIT_COLORS,
+  HABIT_ICON_KEYS,
+  habitIconKey,
+  type HabitIconKey,
+} from '@/constants/habits';
 import { Radius, Space } from '@/constants/theme';
 import { friendlyDataError } from '@/features/auth/errors';
 import { useTheme } from '@/lib/use-theme';
@@ -23,7 +30,7 @@ const TARGETS = [1, 2, 3, 4, 5, 6, 7] as const;
 
 type Draft = {
   name: string;
-  icon: string;
+  icon: HabitIconKey;
   color: string;
   frequencyType: FrequencyType;
   days: number[];
@@ -35,7 +42,7 @@ function draftFrom(habit: Habit | null): Draft {
   if (!habit) {
     return {
       name: '',
-      icon: HABIT_ICONS[0],
+      icon: DEFAULT_HABIT_ICON,
       color: HABIT_COLORS[0],
       frequencyType: 'daily',
       // Sensible starting point for "chosen days": the working week.
@@ -47,7 +54,9 @@ function draftFrom(habit: Habit | null): Draft {
 
   return {
     name: habit.name,
-    icon: habit.icon ?? HABIT_ICONS[0],
+    // Legacy rows hold an emoji; the helper turns it into a glyph key so the
+    // picker opens on the icon the user already chose.
+    icon: habitIconKey(habit.icon) ?? DEFAULT_HABIT_ICON,
     color: habit.color,
     frequencyType: habit.frequency_type,
     days: habit.frequency_days,
@@ -226,14 +235,15 @@ export function HabitEditor({ visible, onClose, habit }: HabitEditorProps) {
       <View style={{ gap: Space.sm }}>
         <FieldLabel>Icon</FieldLabel>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Space.sm }}>
-          {HABIT_ICONS.map((icon) => {
+          {HABIT_ICON_KEYS.map((icon) => {
             const selected = draft.icon === icon;
+            const label = icon.charAt(0).toUpperCase() + icon.slice(1);
             return (
               <Pressable
                 key={icon}
                 onPress={() => update({ icon })}
                 accessibilityRole="button"
-                accessibilityLabel={`Icon ${icon}`}
+                accessibilityLabel={`Icon ${label}`}
                 accessibilityState={{ selected }}
                 style={({ pressed }) => ({
                   width: 44,
@@ -246,7 +256,7 @@ export function HabitEditor({ visible, onClose, habit }: HabitEditorProps) {
                   backgroundColor: selected ? colors.accentSoft : colors.surface,
                   opacity: pressed ? 0.7 : 1,
                 })}>
-                <AppText style={{ fontSize: 20 }}>{icon}</AppText>
+                <HabitGlyph name={icon} size={20} color={selected ? colors.accent : colors.text} />
               </Pressable>
             );
           })}

@@ -7,17 +7,19 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#FBFBF8",
+    "backgroundColor": "#FBF8F4",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yezawtun.pace"
+      "bundleIdentifier": "com.yezawtun.pace",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.yezawtun.pace",
       "adaptiveIcon": {
-        "backgroundColor": "#E9F0E6",
+        "backgroundColor": "#C4472E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
@@ -33,9 +35,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FBFBF8",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#FBF8F4",
           "dark": {
-            "backgroundColor": "#121211"
+            "image": "./assets/images/splash-icon-dark.png",
+            "backgroundColor": "#1C1917"
           }
         }
       ],
