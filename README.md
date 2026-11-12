@@ -472,6 +472,15 @@ supabase/
 - [x] **Round 2 · C. Copy and screens** — taglines removed, the system applied everywhere
 - [x] **Round 2 · D. Proof photos** — schema, private bucket, picker, compression, thumbnails
 - [x] **Round 2 · E. Polish** — haptics, reduced motion, shortcuts, pagination, contrast pass
+- [x] **Round 3 · F. Release pass** — native offline, SVG habit icons, swipe delete, icons and
+      splash drawn from code
+
+## Store submission
+
+`PRIVACY.md` is the privacy policy text to publish (fill in the contact address and the effective
+date first). Both stores require a public URL for it, plus a support URL — a Google Doc or a
+GitHub Pages copy is enough. `TESTING.md` is the release checklist, and `eas.json` already has
+`development`, `preview` and `production` profiles.
 
 ## Troubleshooting
 

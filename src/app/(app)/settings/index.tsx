@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Constants from 'expo-constants';
 import { Alert, Platform, Pressable, View } from 'react-native';
 import { useState } from 'react';
 
@@ -461,8 +462,7 @@ export default function SettingsScreen() {
       <View style={{ marginTop: Space.xxl }}>
         <SectionHeader title="About" />
         <Card padded={false}>
-          <InfoRow label="Version" value="1.0.0" first />
-          <InfoRow label="Tagline" value="Find your daily pace." />
+          <InfoRow label="Version" value={Constants.expoConfig?.version ?? '1.0.0'} first />
           <InfoRow label="Platform" value={Platform.OS} />
         </Card>
       </View>
