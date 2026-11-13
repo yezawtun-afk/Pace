@@ -430,7 +430,8 @@ src/
                         theme, web helpers
   types/                database types + env typings
 supabase/
-  migrations/           the SQL you paste into the dashboard SQL Editor (0001 schema, 0002 proofs)
+  migrations/           the SQL you paste into the dashboard SQL Editor (0001 schema, 0002 proofs,
+                        0003 identity, seasons, shared pace)
   README.md             database and auth setup, verification queries, troubleshooting
 ```
 
@@ -472,6 +473,10 @@ supabase/
 - [x] **Round 2 · C. Copy and screens** — taglines removed, the system applied everywhere
 - [x] **Round 2 · D. Proof photos** — schema, private bucket, picker, compression, thumbnails
 - [x] **Round 2 · E. Polish** — haptics, reduced motion, shortcuts, pagination, contrast pass
+- [x] **Round 3 · F. Release pass** — native offline, SVG habit icons, swipe delete, icons and
+      splash drawn from code
+- [x] **Round 4 · G. Closure and sharing** — habit identity, adaptive targets, 30-day seasons with
+      a review, shared pace link (client + edge function)
 - [x] **Round 3 · F. Release pass** — native offline, SVG habit icons, swipe delete, icons and
       splash drawn from code
 

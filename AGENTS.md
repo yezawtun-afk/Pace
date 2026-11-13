@@ -144,7 +144,7 @@ long side, JPEG 0.7, refused above 2 MB; the stored value is a path, never a URL
   `colors.text` on `accentSoft` with an `accent` border. `scripts/contrast.mjs` is a one-off audit
   tool (safe to delete or keep).
 - Journal history paginates at 40 (`PAGE_SIZE`); `Card` clips its children (`overflow: 'hidden'`);
-  `TaskRow`, `TodayHabitRow` and `EntryCard` are `memo`ised. `npm test` is 92 checks.
+  `TaskRow`, `TodayHabitRow` and `EntryCard` are `memo`ised. `npm test` is 117 checks.
 
 ### Round 3 (phase F), release pass
 
@@ -170,6 +170,21 @@ long side, JPEG 0.7, refused above 2 MB; the stored value is a path, never a URL
   `ios.config.usesNonExemptEncryption: false`.
 - Nice-to-haves deliberately skipped: swapping the `ScrollView` screens to `FlatList` (lists are
   paginated or short, and the virtualisation would fight the centred column).
+
+### Round 4 (phase G), closure and sharing
+
+- **Habit identity**: `habits.identity text` (migration 0003). Optional sentence shown italic under
+  the name on the card; edited in the habit editor.
+- **Adaptive targets**: `adaptiveTarget()` suggests raising (3 good weeks) or lowering (1 or fewer)
+  a weekly target, shown as a one-tap banner in the habit detail. `toRow` now persists
+  `ask_for_proof`, `identity` and `archived` (previously dropped).
+- **Seasons**: 30-day chapters. `seasonProgress()` / `seasonQuote()` in
+  `src/features/habits/seasons.ts`. A banner appears on Today when the season ends, linking to
+  `/seasons/review` (stats, a journal quote, retire/keep per habit, start next season). Profile
+  gains `current_season_start`.
+- **Shared pace link**: `pace_shares` table + RLS, `src/features/sharing/api.ts`, a `/pace/[token]`
+  web route and a Supabase edge function `supabase/functions/pace-share`. Settings gets a
+  create/revoke control. Deploying the function and hosting the web build are manual steps.
 
 Storage notes: `expo-image-picker` uses `mediaTypes: ['images']`; `expo-image-manipulator` must be
 used through `ImageManipulator.manipulate(uri)` → `.resize()`/`.renderAsync()`/`.saveAsync()`
@@ -261,7 +276,7 @@ npm run typecheck        # tsc --noEmit
 npm run lint             # expo lint (ESLint + Prettier rules)
 npm run lint:fix         # auto-fix what can be fixed
 npm run format           # prettier --write .
-npm test                 # jest (92 checks: habits, Today, journal, proofs, shortcuts)
+npm test                 # jest (117 checks: habits, Today, journal, proofs, shortcuts)
 npm run export:web       # static web build into dist/
 npm run icons            # redraw app icon, splash marks and favicon from scripts/generate-icons.mjs
 ```
