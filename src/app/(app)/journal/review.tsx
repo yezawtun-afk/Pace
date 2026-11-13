@@ -1,11 +1,12 @@
-import { addDays } from 'date-fns';
+import { addDays, format } from 'date-fns';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { Button, ButtonRow, TextLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DailyPaceCard } from '@/features/journal/components/daily-pace-card';
 import { Dot } from '@/components/ui/chip';
 import { ErrorState } from '@/components/ui/error-state';
 import { AppText } from '@/components/ui/text';
@@ -17,9 +18,11 @@ import { useHabitLogs, useHabits } from '@/features/habits/queries';
 import { habitsForToday } from '@/features/today/summary';
 import { ProofStrip } from '@/features/proofs/components/proof-strip';
 import { successFeedback } from '@/lib/haptics';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { MoodPicker } from '@/features/journal/components/mood-picker';
 import { TagPicker } from '@/features/journal/components/tag-picker';
-import { promptForDate } from '@/features/journal/journal';
+import { promptForDate, moodLabel } from '@/features/journal/journal';
 import {
   useCreateTag,
   useJournalEntries,
@@ -207,8 +210,11 @@ function ReviewFlow({
   const [moved, setMoved] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
+
+  const cardRef = useRef<any>(null);
 
   const tomorrow = toDateString(addDays(today, 1));
 
@@ -260,36 +266,77 @@ function ReviewFlow({
     setPromptText(JOURNAL_PROMPTS[(index + 1) % JOURNAL_PROMPTS.length]);
   }
 
-  async function finish() {
-    if (saving) return;
-
+  async function saveEntryNow() {
     const hasWords = body.trim().length > 0;
 
-    // Nothing to record and nothing existed before: just close the flow.
+    // Nothing to record and nothing existed before: nothing to save.
     if (!hasWords && mood === null && tagIds.length === 0 && !existing) {
-      router.replace('/journal');
-      return;
+      return null;
     }
+
+    const row = await saveEntry.mutateAsync({
+      entryDate: todayKey,
+      title: existing?.title ?? null,
+      body,
+      mood,
+      promptText,
+    });
+
+    await saveTags.mutateAsync({ entryId: row.id, tagIds });
+
+    return row;
+  }
+
+  async function finish() {
+    if (saving) return;
 
     setSaving(true);
     setError(null);
 
     try {
-      const row = await saveEntry.mutateAsync({
-        entryDate: todayKey,
-        title: existing?.title ?? null,
-        body,
-        mood,
-        promptText,
-      });
-
-      await saveTags.mutateAsync({ entryId: row.id, tagIds });
-
+      await saveEntryNow();
       successFeedback();
       router.replace('/journal');
     } catch (cause) {
       setSaving(false);
       setError(friendlyDataError(cause));
+    }
+  }
+
+  async function sharePace() {
+    if (sharing || saving) return;
+
+    setSharing(true);
+    setError(null);
+
+    try {
+      await saveEntryNow();
+      successFeedback();
+
+      const capture = cardRef.current?.capture?.();
+      const dataUrl = capture ? await capture : null;
+
+      if (!dataUrl) {
+        throw new Error('The daily card could not be rendered.');
+      }
+
+      const base64 = dataUrl.split(',')[1];
+      const uri = `${FileSystem.cacheDirectory}pace-daily.png`;
+
+      await FileSystem.writeAsStringAsync(uri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: "Today's pace",
+        });
+      }
+    } catch (cause) {
+      setError(friendlyDataError(cause));
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -531,6 +578,16 @@ function ReviewFlow({
             fullWidth={false}
             style={{ flex: 1 }}
           />
+          {step === STEP_TITLES.length - 1 ? (
+            <Button
+              label="Share today's pace"
+              variant="secondary"
+              onPress={() => void sharePace()}
+              loading={sharing}
+              fullWidth={false}
+              style={{ flex: 1 }}
+            />
+          ) : null}
         </ButtonRow>
 
         <TextLink
@@ -538,6 +595,17 @@ function ReviewFlow({
           onPress={() => router.replace('/journal')}
           align="center"
           tone="accent"
+        />
+      </View>
+      <View style={{ position: 'absolute', left: -9999, top: 0, opacity: 0 }} pointerEvents="none">
+        <DailyPaceCard
+          ref={cardRef}
+          dateLabel={format(today, 'EEEE, d MMMM')}
+          habitsDone={habits.filter((entry) => entry.done).length}
+          habitsTotal={habits.length}
+          tasksDone={doneTasks.length}
+          tasksTotal={tasks.length}
+          line={body.trim() || (mood ? (moodLabel(mood) ?? '') : '')}
         />
       </View>
     </Screen>

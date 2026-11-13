@@ -31,7 +31,8 @@ import {
   wordCount,
 } from '@/features/journal/journal';
 import { useJournalEntries, useJournalEntryTags, useJournalTags } from '@/features/journal/queries';
-import { useHabitLogs } from '@/features/habits/queries';
+import { buildDaySummaries, moodHabitInsight } from '@/features/journal/correlation';
+import { useHabitLogs, useHabits } from '@/features/habits/queries';
 
 /** How many entries render at once before "Show older entries". */
 const PAGE_SIZE = 40;
@@ -47,6 +48,7 @@ export default function JournalScreen() {
   const tagsQuery = useJournalTags();
   const entryTagsQuery = useJournalEntryTags();
   const logsQuery = useHabitLogs();
+  const habitsQuery = useHabits();
 
   const [query, setQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -88,6 +90,12 @@ export default function JournalScreen() {
   const streak = journalingStreak(entries, today);
   const trend = moodTrend(entries, 30, today);
   const average = averageMood(entries, 30, today);
+
+  const insight = habitsQuery.data
+    ? moodHabitInsight(
+        buildDaySummaries(entries, habitsQuery.data, logsQuery.data ?? [], 30, today),
+      )
+    : null;
 
   const loading = entriesQuery.isPending || tagsQuery.isPending || entryTagsQuery.isPending;
   const loadFailed = entriesQuery.isError || tagsQuery.isError || entryTagsQuery.isError;
@@ -270,6 +278,26 @@ export default function JournalScreen() {
               </View>
             </Card>
           </View>
+
+          {insight ? (
+            <View style={{ marginTop: Space.xxl }}>
+              <Card>
+                <View style={{ gap: Space.sm }}>
+                  <AppText variant="overline" tone="tertiary">
+                    Mood and habits
+                  </AppText>
+                  <AppText variant="bodyStrong">
+                    On days you felt good, you completed {Math.round(insight.positiveRate * 100)}%
+                    of your habits, versus {Math.round(insight.negativeRate * 100)}% on rough days.
+                  </AppText>
+                  <AppText variant="caption" tone="tertiary">
+                    Based on {insight.positiveDays} good and {insight.negativeDays} rough days in
+                    the last 30.
+                  </AppText>
+                </View>
+              </Card>
+            </View>
+          ) : null}
 
           <View style={{ marginTop: Space.xxl }}>
             <TextField
