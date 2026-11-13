@@ -7,14 +7,7 @@ import { Space } from '@/constants/theme';
 import { useTheme } from '@/lib/use-theme';
 
 import { isScheduledOn, scheduleLabel, weekDays } from '../schedule';
-import {
-  daysSinceLastCompletion,
-  isDone,
-  ratePercent,
-  restDayBank,
-  rustOpacity,
-  todayState,
-} from '../stats';
+import { habitRust, isDone, ratePercent, restDayBank, todayState } from '../stats';
 import { toDateString } from '@/lib/dates';
 import type { Habit } from '@/types/database';
 import { HabitBadge } from './habit-badge';
@@ -41,7 +34,7 @@ export function HabitCard({ habit, done, today, onToggleToday, onOpen }: HabitCa
   const restToday = state === 'rest';
 
   const days = weekDays(today);
-  const rust = rustOpacity(daysSinceLastCompletion(done, today));
+  const rust = habitRust(done, habit.created_at, today);
   const bank = restDayBank(habit, done, today);
 
   // One spoken sentence for the whole card, so the dots are decoration only.
@@ -54,90 +47,92 @@ export function HabitCard({ habit, done, today, onToggleToday, onOpen }: HabitCa
   ].join(', ');
 
   return (
-    <Card padded={false} style={{ opacity: rust }}>
+    <Card padded={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: Space.md }}>
-        <HabitBadge icon={habit.icon} color={habit.color} />
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', opacity: rust }}>
+          <HabitBadge icon={habit.icon} color={habit.color} />
 
-        <Pressable
-          onPress={onOpen}
-          accessibilityRole="button"
-          accessibilityLabel={`${spoken}. Open details.`}
-          style={({ pressed }) => ({
-            flex: 1,
-            gap: Space.xxs,
-            paddingVertical: Space.md,
-            paddingHorizontal: Space.md,
-            opacity: pressed ? 0.65 : 1,
-          })}>
-          <AppText variant="bodyStrong" numberOfLines={2}>
-            {habit.name}
-          </AppText>
-          {habit.identity ? (
-            <AppText
-              variant="caption"
-              tone="secondary"
-              numberOfLines={1}
-              style={{ fontStyle: 'italic' }}>
-              {habit.identity}
+          <Pressable
+            onPress={onOpen}
+            accessibilityRole="button"
+            accessibilityLabel={`${spoken}. Open details.`}
+            style={({ pressed }) => ({
+              flex: 1,
+              gap: Space.xxs,
+              paddingVertical: Space.md,
+              paddingHorizontal: Space.md,
+              opacity: pressed ? 0.65 : 1,
+            })}>
+            <AppText variant="bodyStrong" numberOfLines={2}>
+              {habit.name}
             </AppText>
-          ) : null}
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.xs + 2 }}>
-            <AppText variant="caption" tone="tertiary">
-              {scheduleLabel(habit)}
-            </AppText>
-            <AppText variant="caption" tone="tertiary">
-              Â·
-            </AppText>
-            <AppText variant="caption" tone={rate7 >= 70 ? 'accent' : 'tertiary'}>
-              {rate7}% / 7d
-            </AppText>
-            {bank.balance > 0 ? (
-              <>
-                <AppText variant="caption" tone="tertiary">
-                  Â·
-                </AppText>
-                <AppText variant="caption" tone="tertiary">
-                  {bank.balance} rest {bank.balance === 1 ? 'day' : 'days'} banked
-                </AppText>
-              </>
+            {habit.identity ? (
+              <AppText
+                variant="caption"
+                tone="secondary"
+                numberOfLines={1}
+                style={{ fontStyle: 'italic' }}>
+                {habit.identity}
+              </AppText>
             ) : null}
-          </View>
 
-          <View
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: Space.sm, marginTop: 2 }}>
-            {days.map((day) => {
-              const doneThatDay = isDone(done, day);
-              const scheduled = isScheduledOn(habit, day);
-              const isFuture = day > today;
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.xs + 2 }}>
+              <AppText variant="caption" tone="tertiary">
+                {scheduleLabel(habit)}
+              </AppText>
+              <AppText variant="caption" tone="tertiary">
+                ·
+              </AppText>
+              <AppText variant="caption" tone={rate7 >= 70 ? 'accent' : 'tertiary'}>
+                {rate7}% / 7d
+              </AppText>
+              {bank.balance > 0 ? (
+                <>
+                  <AppText variant="caption" tone="tertiary">
+                    ·
+                  </AppText>
+                  <AppText variant="caption" tone="tertiary">
+                    {bank.balance} rest {bank.balance === 1 ? 'day' : 'days'} banked
+                  </AppText>
+                </>
+              ) : null}
+            </View>
 
-              return (
-                <View
-                  key={toDateString(day)}
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: 4,
-                    backgroundColor: doneThatDay
-                      ? habit.color
-                      : scheduled && !isFuture
-                        ? 'transparent'
-                        : colors.border,
-                    borderWidth: doneThatDay ? 0 : scheduled && !isFuture ? 1 : 0,
-                    borderColor: colors.borderStrong,
-                    opacity: isFuture ? 0.45 : 1,
-                  }}
-                />
-              );
-            })}
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+              style={{ flexDirection: 'row', alignItems: 'center', gap: Space.sm, marginTop: 2 }}>
+              {days.map((day) => {
+                const doneThatDay = isDone(done, day);
+                const scheduled = isScheduledOn(habit, day);
+                const isFuture = day > today;
 
-            <AppText variant="caption" tone="tertiary" style={{ marginLeft: Space.xs }}>
-              {rate}% / 30d
-            </AppText>
-          </View>
-        </Pressable>
+                return (
+                  <View
+                    key={toDateString(day)}
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: 4,
+                      backgroundColor: doneThatDay
+                        ? habit.color
+                        : scheduled && !isFuture
+                          ? 'transparent'
+                          : colors.border,
+                      borderWidth: doneThatDay ? 0 : scheduled && !isFuture ? 1 : 0,
+                      borderColor: colors.borderStrong,
+                      opacity: isFuture ? 0.45 : 1,
+                    }}
+                  />
+                );
+              })}
+
+              <AppText variant="caption" tone="tertiary" style={{ marginLeft: Space.xs }}>
+                {rate}% / 30d
+              </AppText>
+            </View>
+          </Pressable>
+        </View>
 
         <View style={{ paddingRight: Space.xs }}>
           <Checkbox
@@ -161,7 +156,7 @@ export function HabitCard({ habit, done, today, onToggleToday, onOpen }: HabitCa
             paddingVertical: Space.xs + 2,
           }}>
           <AppText variant="caption" tone="tertiary">
-            Rest day â€” {scheduleLabel(habit)}. You can still check it in.
+            Rest day — {scheduleLabel(habit)}. You can still check it in.
           </AppText>
         </View>
       ) : null}

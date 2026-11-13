@@ -1,7 +1,7 @@
 import { addDays, format } from 'date-fns';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 
 import { Button, ButtonRow, TextLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -33,6 +33,7 @@ import {
 } from '@/features/journal/queries';
 import { useRescheduleTasks, useTasks } from '@/features/tasks/queries';
 import { toDateString, todayString } from '@/lib/dates';
+import { downloadImage } from '@/lib/share-image';
 import { useTheme } from '@/lib/use-theme';
 import type { TodayHabit } from '@/features/today/summary';
 import type { JournalEntry, Tag, Task } from '@/types/database';
@@ -320,6 +321,13 @@ function ReviewFlow({
         throw new Error('The daily card could not be rendered.');
       }
 
+      // The browser has no share sheet: download the image instead.
+      if (Platform.OS === 'web') {
+        const saved = await downloadImage(dataUrl, 'pace-daily.png');
+        if (!saved) throw new Error('The daily card could not be saved.');
+        return;
+      }
+
       const base64 = dataUrl.split(',')[1];
       const uri = `${FileSystem.cacheDirectory}pace-daily.png`;
 
@@ -327,12 +335,14 @@ function ReviewFlow({
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'image/png',
-          dialogTitle: "Today's pace",
-        });
+      if (!(await Sharing.isAvailableAsync())) {
+        throw new Error('Sharing is not available on this device.');
       }
+
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/png',
+        dialogTitle: "Today's pace",
+      });
     } catch (cause) {
       setError(friendlyDataError(cause));
     } finally {
@@ -578,17 +588,22 @@ function ReviewFlow({
             fullWidth={false}
             style={{ flex: 1 }}
           />
-          {step === STEP_TITLES.length - 1 ? (
+        </ButtonRow>
+
+        {step === STEP_TITLES.length - 1 ? (
+          <View style={{ marginTop: Space.md }}>
             <Button
               label="Share today's pace"
               variant="secondary"
               onPress={() => void sharePace()}
               loading={sharing}
-              fullWidth={false}
-              style={{ flex: 1 }}
+              disabled={saving}
             />
-          ) : null}
-        </ButtonRow>
+            <AppText variant="caption" tone="tertiary" style={{ marginTop: Space.xs }}>
+              A 1080 × 1920 card with your ring and one line from today.
+            </AppText>
+          </View>
+        ) : null}
 
         <TextLink
           label="Leave without saving"

@@ -1,9 +1,11 @@
 import { useLocalSearchParams } from 'expo-router';
+import { format, parseISO } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import { AppText } from '@/components/ui/text';
 import { Screen } from '@/components/ui/screen';
 import { Space } from '@/constants/theme';
@@ -75,23 +77,37 @@ export default function SharedPaceScreen() {
   const done = data.habitsDone + data.tasksDone;
   const ratio = total > 0 ? done / total : 0;
 
+  const counts = [
+    data.habitsTotal > 0 ? `Habits ${data.habitsDone}/${data.habitsTotal}` : null,
+    data.tasksTotal > 0 ? `Tasks ${data.tasksDone}/${data.tasksTotal}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <Screen>
       <View style={{ alignItems: 'center', gap: Space.lg, paddingTop: Space.xxl }}>
         <AppText variant="overline" tone="tertiary">
           {data.displayName ? `${data.displayName}'s pace` : "A friend's pace"}
         </AppText>
-        <AppText variant="heading">{data.date}</AppText>
+        <AppText variant="heading">{format(parseISO(data.date), 'EEEE d MMMM')}</AppText>
 
         <Card>
-          <View style={{ alignItems: 'center', gap: Space.md, paddingVertical: Space.lg }}>
-            <AppText variant="title">{Math.round(ratio * 100)}%</AppText>
-            <AppText variant="caption" tone="tertiary">
-              {done} of {total} done today
-            </AppText>
-            <AppText variant="caption" tone="tertiary">
-              Habits {data.habitsDone}/{data.habitsTotal} · Tasks {data.tasksDone}/{data.tasksTotal}
-            </AppText>
+          <View style={{ gap: Space.md, paddingVertical: Space.lg }}>
+            <View style={{ alignItems: 'center', gap: Space.xs }}>
+              <AppText variant="title">{Math.round(ratio * 100)}%</AppText>
+              <AppText variant="caption" tone="tertiary">
+                {done} of {total} done today
+              </AppText>
+            </View>
+
+            <ProgressBar ratio={ratio} />
+
+            {counts ? (
+              <AppText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+                {counts}
+              </AppText>
+            ) : null}
           </View>
         </Card>
 

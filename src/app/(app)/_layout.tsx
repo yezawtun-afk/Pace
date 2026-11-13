@@ -31,6 +31,7 @@ export default function AppLayout() {
         <Stack.Screen name="habits/index" />
         <Stack.Screen name="journal/index" />
         <Stack.Screen name="journal/review" />
+        <Stack.Screen name="seasons/review" />
         <Stack.Screen name="tasks/index" />
         <Stack.Screen name="settings/index" />
       </Stack>

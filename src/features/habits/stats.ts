@@ -5,7 +5,7 @@
  * read as plain sentences.
  */
 
-import { addDays, eachDayOfInterval, startOfDay } from 'date-fns';
+import { addDays, differenceInCalendarDays, eachDayOfInterval, startOfDay } from 'date-fns';
 
 import { toDateString } from '@/lib/dates';
 
@@ -204,6 +204,18 @@ export function rustOpacity(daysSince: number): number {
   return 1 - fade * 0.6;
 }
 
+/**
+ * Opacity for a whole habit card. A habit with no completions yet is measured
+ * from the day it was created, so a brand-new habit never starts out faded.
+ */
+export function habitRust(logs: Set<string>, createdAt: string, today: Date): number {
+  const sinceLast = daysSinceLastCompletion(logs, today);
+  if (sinceLast !== Infinity) return rustOpacity(sinceLast);
+
+  const sinceCreated = differenceInCalendarDays(startOfDay(today), startOfDay(new Date(createdAt)));
+  return rustOpacity(Math.max(0, sinceCreated));
+}
+
 export type RestDayBank = {
   /** Weeks in the last four that earned a rest day. */
   banked: number;
@@ -277,20 +289,23 @@ export function adaptiveTarget(
   const current = habit.target_per_week ?? 3;
   const thisWeek = weekStart(startOfDay(today));
 
-  const hits = [1, 2, 3].map((index) => {
-    const start = addDays(thisWeek, -7 * index);
-    const days = weekDays(start);
-    const done = days.filter((day) => logs.has(toDateString(day))).length;
-    return done >= current;
+  const counts = [1, 2, 3].map((index) => {
+    const days = weekDays(addDays(thisWeek, -7 * index));
+    return days.filter((day) => logs.has(toDateString(day))).length;
   });
 
-  const hitCount = hits.filter(Boolean).length;
+  const hitCount = counts.filter((done) => done >= current).length;
+  const bestWeek = Math.max(...counts);
 
   if (hitCount === 3 && current < 7) {
     return { suggested: current + 1, reason: 'You hit your target 3 weeks running.' };
   }
-  if (hitCount <= 1 && current > 1) {
+
+  // Only lower when no week came close: a 3 of 4 week right after raising the
+  // target would otherwise suggest lowering it straight back.
+  if (bestWeek <= current - 2 && current > 1) {
     return { suggested: current - 1, reason: 'A lower target may fit better right now.' };
   }
+
   return { suggested: null, reason: '' };
 }

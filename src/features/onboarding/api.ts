@@ -8,6 +8,7 @@
  */
 
 import { updateProfile } from '@/features/auth/api';
+import { toDateString } from '@/lib/dates';
 import { toDbTime } from '@/lib/time';
 import { supabase } from '@/lib/supabase';
 import type { HabitInsert, Profile } from '@/types/database';
@@ -59,6 +60,8 @@ export async function completeOnboarding({
       timezone,
       evening_review_time: toDbTime(eveningReviewTime),
       onboarding_completed: true,
+      // The first 30-day season starts on the day the app is set up.
+      current_season_start: toDateString(new Date()),
     });
   } catch (error) {
     // The profile update failed, so the user stays in onboarding. Remove the

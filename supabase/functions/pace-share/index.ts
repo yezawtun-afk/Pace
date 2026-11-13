@@ -11,12 +11,26 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+const corsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, OPTIONS',
+  'access-control-allow-headers': 'authorization, apikey, content-type',
+};
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
+
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   const token = url.searchParams.get('token');
 
   if (!token) {
-    return new Response(JSON.stringify({ error: 'missing token' }), { status: 400 });
+    return new Response(JSON.stringify({ error: 'missing token' }), {
+      status: 400,
+      headers: corsHeaders,
+    });
   }
 
   const { data: share, error: shareError } = await admin
@@ -26,33 +40,66 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   if (shareError || !share || share.revoked_at) {
-    return new Response(JSON.stringify({ error: 'not found' }), { status: 404 });
+    return new Response(JSON.stringify({ error: 'not found' }), {
+      status: 404,
+      headers: corsHeaders,
+    });
   }
 
   const userId = share.user_id;
-  const today = new Date().toISOString().slice(0, 10);
 
-  // Profile (display name).
+  // Profile (display name + timezone, so "today" matches the owner's day).
   const { data: profile } = await admin
     .from('profiles')
-    .select('display_name')
+    .select('display_name, timezone')
     .eq('id', userId)
     .maybeSingle();
 
-  // Habits + today's logs.
-  const { data: habits } = await admin.from('habits').select('id, frequency_type, frequency_days, target_per_week, archived').eq('user_id', userId).eq('archived', false);
-  const { data: logs } = await admin.from('habit_logs').select('habit_id, log_date').eq('user_id', userId).eq('log_date', today);
+  const timezone = profile?.timezone ?? 'UTC';
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
 
-  const doneHabitIds = new Set((logs ?? []).map((l: { habit_id: string }) => l.habit_id));
-  // A habit counts as "due today" if its schedule includes today. Keep it simple:
-  // count all non-archived habits as the denominator; done = those logged today.
-  const habitsTotal = (habits ?? []).length;
-  const habitsDone = (habits ?? []).filter((h: { id: string }) => doneHabitIds.has(h.id)).length;
+  const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
+
+  const { data: habits } = await admin
+    .from('habits')
+    .select('id, frequency_type, frequency_days')
+    .eq('user_id', userId)
+    .eq('archived', false);
+
+  const { data: logs } = await admin
+    .from('habit_logs')
+    .select('habit_id')
+    .eq('user_id', userId)
+    .eq('log_date', today);
+
+  const doneHabitIds = new Set((logs ?? []).map((log: { habit_id: string }) => log.habit_id));
+
+  // A habit counts for today when its schedule says so: daily always, chosen
+  // days only on those days, weekly targets whatever day it is.
+  const due = (habits ?? []).filter(
+    (habit: { frequency_type: string; frequency_days: number[] | null }) =>
+      habit.frequency_type === 'daily' ||
+      habit.frequency_type === 'weekly_target' ||
+      (habit.frequency_type === 'weekdays' && (habit.frequency_days ?? []).includes(weekday)),
+  );
+
+  const habitsTotal = due.length;
+  const habitsDone = due.filter((habit: { id: string }) => doneHabitIds.has(habit.id)).length;
 
   // Tasks due today.
-  const { data: tasks } = await admin.from('tasks').select('id, completed, due_date').eq('user_id', userId).eq('due_date', today);
+  const { data: tasks } = await admin
+    .from('tasks')
+    .select('completed, due_date')
+    .eq('user_id', userId)
+    .eq('due_date', today);
+
   const tasksTotal = (tasks ?? []).length;
-  const tasksDone = (tasks ?? []).filter((t: { completed: boolean }) => t.completed).length;
+  const tasksDone = (tasks ?? []).filter((task: { completed: boolean }) => task.completed).length;
 
   const body = {
     date: today,
@@ -64,9 +111,6 @@ Deno.serve(async (req) => {
   };
 
   return new Response(JSON.stringify(body), {
-    headers: {
-      'content-type': 'application/json',
-      'access-control-allow-origin': '*',
-    },
+    headers: { ...corsHeaders, 'content-type': 'application/json' },
   });
 });

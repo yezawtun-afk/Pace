@@ -1,5 +1,6 @@
 import type { HabitSchedule } from '../schedule';
 import {
+  adaptiveTarget,
   completionRate,
   currentStreak,
   daysSinceLastCompletion,
@@ -8,6 +9,7 @@ import {
   lastDays,
   ratePercent,
   restDayBank,
+  habitRust,
   rustOpacity,
   streakLabel,
   todayState,
@@ -56,7 +58,7 @@ describe('lastDays and doneKeys', () => {
   });
 });
 
-describe('currentStreak â€” daily', () => {
+describe('currentStreak — daily', () => {
   it('counts consecutive completed days, including today', () => {
     expect(currentStreak(daily, done('2026-11-10', '2026-11-09', '2026-11-08'), TUESDAY)).toBe(3);
   });
@@ -74,9 +76,9 @@ describe('currentStreak â€” daily', () => {
   });
 });
 
-describe('currentStreak â€” chosen weekdays', () => {
+describe('currentStreak — chosen weekdays', () => {
   it('skips rest days instead of breaking on them', () => {
-    // Fri 13, Wed 11, Mon 9, Fri 6 â€” Tue/Thu/Sat/Sun are rest days.
+    // Fri 13, Wed 11, Mon 9, Fri 6 — Tue/Thu/Sat/Sun are rest days.
     expect(
       currentStreak(
         monWedFri,
@@ -106,7 +108,7 @@ describe('currentStreak â€” chosen weekdays', () => {
   });
 });
 
-describe('currentStreak â€” weekly target', () => {
+describe('currentStreak — weekly target', () => {
   it('counts weeks that reached the target, including the open one', () => {
     // This week: 9, 10, 11 (3). Last week: 2, 3, 4 (3).
     expect(
@@ -237,6 +239,90 @@ describe('weekBuckets', () => {
   });
 });
 
+describe('adaptiveTarget', () => {
+  const fivePerWeek: HabitSchedule = {
+    frequency_type: 'weekly_target',
+    frequency_days: [],
+    target_per_week: 5,
+  };
+
+  it('ignores habits that are not weekly targets', () => {
+    expect(adaptiveTarget(daily, done('2026-11-10'), TUESDAY).suggested).toBeNull();
+  });
+
+  it('raises the target after three full weeks', () => {
+    const logs = done(
+      '2026-11-02',
+      '2026-11-03',
+      '2026-11-04',
+      '2026-11-05',
+      '2026-11-06',
+      '2026-10-26',
+      '2026-10-27',
+      '2026-10-28',
+      '2026-10-29',
+      '2026-10-30',
+      '2026-10-19',
+      '2026-10-20',
+      '2026-10-21',
+      '2026-10-22',
+      '2026-10-23',
+    );
+    expect(adaptiveTarget(fivePerWeek, logs, TUESDAY).suggested).toBe(6);
+  });
+
+  it('does not raise past seven', () => {
+    const sevens: HabitSchedule = { ...fivePerWeek, target_per_week: 7 };
+    const logs = done(
+      '2026-11-02',
+      '2026-11-03',
+      '2026-11-04',
+      '2026-11-05',
+      '2026-11-06',
+      '2026-11-07',
+      '2026-11-08',
+      '2026-10-26',
+      '2026-10-27',
+      '2026-10-28',
+      '2026-10-29',
+      '2026-10-30',
+      '2026-10-31',
+      '2026-11-01',
+      '2026-10-19',
+      '2026-10-20',
+      '2026-10-21',
+      '2026-10-22',
+      '2026-10-23',
+      '2026-10-24',
+      '2026-10-25',
+    );
+    expect(adaptiveTarget(sevens, logs, TUESDAY).suggested).toBeNull();
+  });
+
+  it('lowers the target when no week came close', () => {
+    const logs = done('2026-11-02', '2026-10-26', '2026-10-19');
+    expect(adaptiveTarget(fivePerWeek, logs, TUESDAY).suggested).toBe(4);
+  });
+
+  it('does not lower straight after a raise', () => {
+    // Three of four weeks: the target was just raised, so this is not a reason
+    // to lower it back.
+    const fourPerWeek: HabitSchedule = { ...fivePerWeek, target_per_week: 4 };
+    const logs = done(
+      '2026-11-02',
+      '2026-11-03',
+      '2026-11-04',
+      '2026-10-26',
+      '2026-10-27',
+      '2026-10-28',
+      '2026-10-19',
+      '2026-10-20',
+      '2026-10-21',
+    );
+    expect(adaptiveTarget(fourPerWeek, logs, TUESDAY).suggested).toBeNull();
+  });
+});
+
 describe('streakLabel', () => {
   it('reads naturally for days and weeks', () => {
     expect(streakLabel(0, daily)).toBe('No streak yet');
@@ -263,6 +349,21 @@ describe('rustOpacity', () => {
 
   it('treats never-done as fully faded', () => {
     expect(rustOpacity(Infinity)).toBeCloseTo(0.4);
+  });
+});
+
+describe('habitRust', () => {
+  it('keeps a brand-new habit at full strength', () => {
+    expect(habitRust(new Set(), '2026-11-10T09:00:00.000Z', TUESDAY)).toBe(1);
+  });
+
+  it('fades an old habit that was never done', () => {
+    expect(habitRust(new Set(), '2026-10-01T09:00:00.000Z', TUESDAY)).toBeCloseTo(0.4);
+  });
+
+  it('measures from the last completion when there is one', () => {
+    // Eleven days is most of the way to the 0.4 floor.
+    expect(habitRust(done('2026-11-01'), '2026-09-01T09:00:00.000Z', TUESDAY)).toBeLessThan(0.8);
   });
 });
 

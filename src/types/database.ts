@@ -241,7 +241,8 @@ export type PaceShare = {
 export type PaceShareInsert = {
   id?: string;
   user_id: string;
-  token: string;
+  /** Filled in by the database default; only read back, never sent. */
+  token?: string;
   created_at?: string;
   revoked_at?: string | null;
 };

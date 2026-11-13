@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Constants from 'expo-constants';
-import { Alert, Platform, Pressable, View } from 'react-native';
+import { Alert, Platform, Pressable, Share, View } from 'react-native';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { useProfile, useUpdateProfile } from '@/features/auth/use-profile';
 import { UpgradeAccountSheet } from '@/features/auth/components/upgrade-account-sheet';
 import { fetchExportData, toCsv } from '@/features/export/api';
-import { createShareToken, revokeShare } from '@/features/sharing/api';
+import { createShareLink, revokeShare } from '@/features/sharing/api';
 import { signOut, deleteAccount } from '@/features/auth/api';
 import { usePreferences, type ThemeMode } from '@/lib/preferences';
 import { useTheme } from '@/lib/use-theme';
@@ -143,7 +143,7 @@ export default function SettingsScreen() {
   const [exporting, setExporting] = useState<'json' | 'csv' | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [shareLink, setShareLink] = useState<{ token: string; url: string } | null>(null);
   const [sharing, setSharing] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
 
@@ -235,9 +235,9 @@ export default function SettingsScreen() {
     setSharing(true);
     setShareMessage(null);
     try {
-      const token = await createShareToken();
-      setShareToken(token);
-      setShareMessage('Link created. Copy it and send it to someone you trust.');
+      const link = await createShareLink();
+      setShareLink(link);
+      setShareMessage('');
     } catch (cause) {
       setShareMessage(cause instanceof Error ? cause.message : 'Could not create the link.');
     } finally {
@@ -245,12 +245,27 @@ export default function SettingsScreen() {
     }
   }
 
+  async function handleCopyLink() {
+    if (!shareLink?.url) return;
+
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareLink.url);
+        setShareMessage('Link copied.');
+        return;
+      }
+      await Share.share({ message: shareLink.url });
+    } catch {
+      setShareMessage('Could not copy. Select the link and copy it by hand.');
+    }
+  }
+
   async function handleRevoke() {
-    if (!shareToken) return;
+    if (!shareLink) return;
     setSharing(true);
     try {
-      await revokeShare(shareToken);
-      setShareToken(null);
+      await revokeShare(shareLink.token);
+      setShareLink(null);
       setShareMessage('Link revoked.');
     } catch (cause) {
       setShareMessage(cause instanceof Error ? cause.message : 'Could not revoke the link.');
@@ -500,11 +515,30 @@ export default function SettingsScreen() {
             no details. Revoke it any time.
           </AppText>
 
-          {shareToken ? (
+          {shareLink ? (
             <View style={{ marginTop: Space.md, gap: Space.sm }}>
-              <AppText variant="caption" tone="secondary" selectable>
-                {shareToken}
-              </AppText>
+              {shareLink.url ? (
+                <AppText variant="caption" tone="secondary" selectable>
+                  {shareLink.url}
+                </AppText>
+              ) : (
+                <AppText variant="caption" tone="secondary" selectable>
+                  {shareLink.token}
+                </AppText>
+              )}
+
+              {shareLink.url ? (
+                <Button
+                  label="Copy link"
+                  variant="secondary"
+                  onPress={() => void handleCopyLink()}
+                />
+              ) : (
+                <AppText variant="caption" tone="tertiary">
+                  Set EXPO_PUBLIC_SHARE_BASE_URL to the hosted web address to get a full link.
+                </AppText>
+              )}
+
               <Button
                 label={sharing ? 'Revoking…' : 'Revoke link'}
                 variant="secondary"

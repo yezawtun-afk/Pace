@@ -32,7 +32,7 @@ type HabitDetailProps = {
   /** "yyyy-MM-dd" keys of the days this habit was done. */
   done: Set<string>;
   today: Date;
-  /** "yyyy-MM-dd" â†’ storage path, for days with a proof photo. */
+  /** "yyyy-MM-dd" → storage path, for days with a proof photo. */
   proofs?: Map<string, string>;
   onClose: () => void;
   onEdit: () => void;
@@ -116,13 +116,13 @@ export function HabitDetail({
           <AppText variant="title">{streakLabel(streak, habit)}</AppText>
           <AppText variant="caption" tone="secondary">
             {weekly
-              ? `A week counts once it reaches ${habit.target_per_week ?? 1}Ã—. The current week can still be finished.`
+              ? `A week counts once it reaches ${habit.target_per_week ?? 1}×. The current week can still be finished.`
               : 'Rest days do not break a streak, and today is never counted as missed.'}
           </AppText>
           {bank.banked > 0 ? (
             <AppText variant="caption" tone="tertiary">
               {bank.balance} of {bank.banked} rest {bank.banked === 1 ? 'day' : 'days'} banked
-              {bank.spent > 0 ? ` Â· ${bank.spent} spent this week` : ''}
+              {bank.spent > 0 ? ` · ${bank.spent} spent this week` : ''}
             </AppText>
           ) : null}
         </View>
@@ -145,7 +145,7 @@ export function HabitDetail({
               {suggestion.reason}
             </AppText>
             <AppText variant="caption" tone="secondary">
-              Suggested target: {suggestion.suggested}x per week.
+              Suggested target: {suggestion.suggested}× per week.
             </AppText>
           </View>
           <Button
@@ -238,7 +238,7 @@ export function HabitDetail({
             backgroundColor: colors.dangerSoft,
           }}>
           <AppText variant="small" tone="secondary">
-            Delete â€œ{habit.name}â€ and its whole history? This cannot be undone.
+            Delete “{habit.name}” and its whole history? This cannot be undone.
           </AppText>
           <View style={{ flexDirection: 'row', gap: Space.lg }}>
             <TextLink label="Delete" tone="danger" onPress={onDelete} />
@@ -247,7 +247,7 @@ export function HabitDetail({
         </View>
       ) : (
         <TextLink
-          label={deleting ? 'Deletingâ€¦' : 'Delete habit'}
+          label={deleting ? 'Deleting…' : 'Delete habit'}
           align="center"
           tone="danger"
           onPress={() => setConfirmDelete(true)}

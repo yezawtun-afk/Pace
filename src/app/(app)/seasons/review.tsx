@@ -4,11 +4,11 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
+import { CheckIcon } from '@/components/ui/icons';
 import { ErrorState } from '@/components/ui/error-state';
 import { AppText } from '@/components/ui/text';
 import { Screen, ScreenHeader } from '@/components/ui/screen';
-import { Space } from '@/constants/theme';
+import { Radius, Space } from '@/constants/theme';
 import { useTheme } from '@/lib/use-theme';
 import { useProfile, useUpdateProfile } from '@/features/auth/use-profile';
 import { useHabitLogs, useHabits, useUpdateHabit } from '@/features/habits/queries';
@@ -195,7 +195,9 @@ export default function SeasonReviewScreen() {
                   });
                 }}
                 accessibilityRole="checkbox"
+                accessibilityLabel={keep ? `Keep ${habit.name}` : `Retire ${habit.name}`}
                 accessibilityState={{ checked: keep }}
+                aria-checked={keep}
                 style={({ pressed }) => ({
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -205,18 +207,23 @@ export default function SeasonReviewScreen() {
                   borderTopColor: colors.border,
                   opacity: pressed ? 0.7 : 1,
                 })}>
-                <Checkbox
-                  checked={keep}
-                  onPress={() => {
-                    setRetire((current) => {
-                      const next = new Set(current);
-                      if (next.has(habit.id)) next.delete(habit.id);
-                      else next.add(habit.id);
-                      return next;
-                    });
-                  }}
-                  label={keep ? `Keep ${habit.name}` : `Retire ${habit.name}`}
-                />
+                {/* Drawn inline: a nested Pressable would swallow or double
+                    the row's tap on the web. */}
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: Radius.sm - 2,
+                    borderWidth: keep ? 0 : 1.5,
+                    borderColor: colors.borderStrong,
+                    backgroundColor: keep ? colors.accent : 'transparent',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  {keep ? (
+                    <CheckIcon size={13} color={colors.accentText} strokeWidth={2.4} />
+                  ) : null}
+                </View>
                 <View style={{ flex: 1, gap: 2 }}>
                   <AppText variant="bodyStrong">{habit.name}</AppText>
                   <AppText variant="caption" tone="tertiary">

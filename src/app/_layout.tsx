@@ -6,7 +6,7 @@ import { useFonts } from 'expo-font';
 import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -140,6 +140,15 @@ function RootNavigator() {
     );
   }
 
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <LoadingScreen />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
@@ -170,13 +179,9 @@ function RootNavigator() {
         {/* Reachable from an emailed recovery link, signed in or not. */}
         <Stack.Screen name="reset-password" />
         <Stack.Screen name="setup-required" />
+        {/* Public, read-only: a shared pace link opens without an account. */}
+        <Stack.Screen name="pace/[token]" />
       </Stack>
-
-      {!isReady ? (
-        <View style={StyleSheet.absoluteFill}>
-          <LoadingScreen />
-        </View>
-      ) : null}
     </View>
   );
 }

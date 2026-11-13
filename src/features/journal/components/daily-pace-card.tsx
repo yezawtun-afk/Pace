@@ -1,6 +1,8 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { View } from 'react-native';
-import Svg, { Circle, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Rect, Text as SvgText } from 'react-native-svg';
+
+import { wrapCardLine } from '../card-text';
 
 export type DailyPaceCardHandle = {
   capture: () => Promise<string | null>;
@@ -37,15 +39,29 @@ export const DailyPaceCard = forwardRef<DailyPaceCardHandle, Props>(function Dai
     capture: () =>
       new Promise<string | null>((resolve) => {
         const node = svgRef.current;
-        if (!node || typeof node.toDataURL !== 'function') {
+        if (!node) {
           resolve(null);
           return;
         }
-        try {
-          node.toDataURL((data: string) => resolve(data ?? null));
-        } catch {
-          resolve(null);
+
+        // Native: the SVG view can rasterise itself.
+        if (typeof node.toDataURL === 'function') {
+          try {
+            node.toDataURL((data: string) => resolve(data ?? null));
+          } catch {
+            resolve(null);
+          }
+          return;
         }
+
+        // Web: hand back the markup as an SVG data URL; the caller turns it
+        // into a PNG with a canvas.
+        const markup: unknown = node.outerHTML ?? node.firstChild?.outerHTML;
+        if (typeof markup !== 'string' || markup.length === 0) {
+          resolve(null);
+          return;
+        }
+        resolve(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`);
       }),
   }));
 
@@ -59,11 +75,20 @@ export const DailyPaceCard = forwardRef<DailyPaceCardHandle, Props>(function Dai
   const circumference = 2 * Math.PI * r;
   const offset = circumference * (1 - ratio);
 
-  const cardLine = line.trim().length > 0 ? line.trim().slice(0, 72) : 'A quiet day, written down.';
+  const cardLine = line.trim().length > 0 ? line.trim() : 'A quiet day, written down.';
+  const cardLines = wrapCardLine(cardLine, 40, 3);
+
+  const counts = [
+    habitsTotal > 0 ? `Habits ${habitsDone}/${habitsTotal}` : null,
+    tasksTotal > 0 ? `Tasks ${tasksDone}/${tasksTotal}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <View style={{ width: W, height: H }} collapsable={false}>
       <Svg ref={svgRef} width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+        <Rect x={0} y={0} width={W} height={H} fill="#FBF8F4" />
         <SvgText
           x={cx}
           y={130}
@@ -100,13 +125,24 @@ export const DailyPaceCard = forwardRef<DailyPaceCardHandle, Props>(function Dai
           of {total} done
         </SvgText>
 
-        <SvgText x={cx} y={1100} fontSize={34} fill={INK} textAnchor="middle">
-          Habits {habitsDone}/{habitsTotal} · Tasks {tasksDone}/{tasksTotal}
-        </SvgText>
+        {counts ? (
+          <SvgText x={cx} y={1100} fontSize={34} fill={INK} textAnchor="middle">
+            {counts}
+          </SvgText>
+        ) : null}
 
-        <SvgText x={cx} y={1240} fontSize={30} fill={MUTED} textAnchor="middle" fontStyle="italic">
-          {cardLine}
-        </SvgText>
+        {cardLines.map((text, index) => (
+          <SvgText
+            key={text + index}
+            x={cx}
+            y={1230 + index * 48}
+            fontSize={30}
+            fill={MUTED}
+            textAnchor="middle"
+            fontStyle="italic">
+            {text}
+          </SvgText>
+        ))}
 
         <SvgText x={cx} y={1780} fontSize={26} fill={MUTED} textAnchor="middle">
           Find your daily pace.

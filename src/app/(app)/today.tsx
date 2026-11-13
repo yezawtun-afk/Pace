@@ -262,7 +262,7 @@ export default function TodayScreen() {
         }>
         <ScreenHeader
           eyebrow={format(today, 'EEEE d MMMM')}
-          title={name ? `Good ${greeting}, ${name}` : `Good ${greeting}`}
+          title={name ? `${greeting}, ${name}` : greeting}
           action={
             <Pressable
               onPress={() => router.push('/journal/review')}
@@ -290,7 +290,7 @@ export default function TodayScreen() {
           <View style={{ marginTop: Space.md, marginBottom: Space.lg }}>
             <Card padded={false}>
               <Pressable
-                onPress={() => router.push('/seasons/review' as any)}
+                onPress={() => router.push('/seasons/review')}
                 accessibilityRole="button"
                 accessibilityLabel="Review your season"
                 style={({ pressed }) => ({

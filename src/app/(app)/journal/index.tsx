@@ -38,6 +38,12 @@ import { useHabitLogs, useHabits } from '@/features/habits/queries';
 const PAGE_SIZE = 40;
 
 /**
+ * The mood/habit line only appears when the gap is big enough to mean
+ * something. A 2-point difference is noise, not an insight.
+ */
+const MIN_INSIGHT_GAP = 0.08;
+
+/**
  * The journal: today's entry, a month-by-month history, search and a mood
  * chart. The guided evening review lives one tap away in the header.
  */
@@ -279,7 +285,7 @@ export default function JournalScreen() {
             </Card>
           </View>
 
-          {insight ? (
+          {insight && Math.abs(insight.delta) >= MIN_INSIGHT_GAP ? (
             <View style={{ marginTop: Space.xxl }}>
               <Card>
                 <View style={{ gap: Space.sm }}>

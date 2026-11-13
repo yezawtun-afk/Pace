@@ -6,7 +6,7 @@ Run through this before every release. Mark each item done on the target platfor
 - [ ] `npm install`
 - [ ] `npm run typecheck` (tsc --noEmit) passes
 - [ ] `npm run lint` passes
-- [ ] `npm test` passes (117 checks)
+- [ ] `npm test` passes (130 checks)
 - [ ] `npx expo-doctor` reports no issues
 - [ ] `npm run export:web` succeeds and `dist/` loads in a browser
 
