@@ -184,6 +184,73 @@ export function weekBuckets(
   return buckets;
 }
 
+/** Days since the most recent completion, or Infinity when it has never been done. */
+export function daysSinceLastCompletion(logs: Set<string>, today: Date): number {
+  if (logs.size === 0) return Infinity;
+
+  const end = startOfDay(today);
+  for (let index = 0; index <= 365; index += 1) {
+    const day = addDays(end, -index);
+    if (logs.has(toDateString(day))) return index;
+  }
+  return Infinity;
+}
+
+/** Opacity for a habit that has gone quiet: full for three days, then easing to 0.4 by day 14. */
+export function rustOpacity(daysSince: number): number {
+  if (daysSince === Infinity) return 0.4;
+  if (daysSince <= 3) return 1;
+  const fade = Math.min(1, (daysSince - 3) / 11);
+  return 1 - fade * 0.6;
+}
+
+export type RestDayBank = {
+  /** Weeks in the last four that earned a rest day. */
+  banked: number;
+  /** Missed scheduled days in the last week, covered by the bank. */
+  spent: number;
+  /** What is left to spend. */
+  balance: number;
+};
+
+function weekReachedTarget(habit: HabitSchedule, logs: Set<string>, start: Date): boolean {
+  const days = weekDays(start);
+  const done = days.filter((day) => logs.has(toDateString(day))).length;
+
+  if (habit.frequency_type === 'weekly_target') {
+    return done >= (habit.target_per_week ?? 1);
+  }
+
+  const scheduled = days.filter((day) => isScheduledOn(habit, day)).length;
+  if (scheduled === 0) return false;
+  return done >= Math.ceil(scheduled * 0.7);
+}
+
+/** A rest day is banked for every good week, and spent to cover a recent miss. */
+export function restDayBank(
+  habit: HabitSchedule,
+  logs: Set<string>,
+  today: Date,
+  weeks = 4,
+): RestDayBank {
+  const end = startOfDay(today);
+  const thisWeek = weekStart(end);
+
+  let banked = 0;
+  for (let index = 1; index <= weeks; index += 1) {
+    const start = addDays(thisWeek, -7 * index);
+    if (weekReachedTarget(habit, logs, start)) banked += 1;
+  }
+
+  const missed = lastDays(7, today).filter(
+    (day) => isScheduledOn(habit, day) && !logs.has(toDateString(day)),
+  ).length;
+
+  const spent = Math.min(banked, missed);
+
+  return { banked, spent, balance: banked - spent };
+}
+
 /** "12 day streak" / "1 day streak" / "No streak yet". */
 export function streakLabel(streak: number, habit: HabitSchedule): string {
   if (streak === 0) return 'No streak yet';

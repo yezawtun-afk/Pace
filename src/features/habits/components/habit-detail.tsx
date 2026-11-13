@@ -14,7 +14,7 @@ import { useTheme } from '@/lib/use-theme';
 import type { Habit } from '@/types/database';
 
 import { scheduleLabel } from '../schedule';
-import { currentStreak, ratePercent, streakLabel, weekBuckets } from '../stats';
+import { currentStreak, ratePercent, restDayBank, streakLabel, weekBuckets } from '../stats';
 import { MonthHeatmap } from './month-heatmap';
 import { WeekBars } from './week-bars';
 
@@ -24,7 +24,7 @@ type HabitDetailProps = {
   /** "yyyy-MM-dd" keys of the days this habit was done. */
   done: Set<string>;
   today: Date;
-  /** "yyyy-MM-dd" → storage path, for days with a proof photo. */
+  /** "yyyy-MM-dd" â†’ storage path, for days with a proof photo. */
   proofs?: Map<string, string>;
   onClose: () => void;
   onEdit: () => void;
@@ -64,6 +64,7 @@ export function HabitDetail({
   const streak = currentStreak(habit, done, today);
   const buckets = weekBuckets(habit, done, today, 8);
   const weekly = habit.frequency_type === 'weekly_target';
+  const bank = restDayBank(habit, done, today);
 
   return (
     <Sheet
@@ -102,9 +103,15 @@ export function HabitDetail({
           <AppText variant="title">{streakLabel(streak, habit)}</AppText>
           <AppText variant="caption" tone="secondary">
             {weekly
-              ? `A week counts once it reaches ${habit.target_per_week ?? 1}×. The current week can still be finished.`
+              ? `A week counts once it reaches ${habit.target_per_week ?? 1}Ã—. The current week can still be finished.`
               : 'Rest days do not break a streak, and today is never counted as missed.'}
           </AppText>
+          {bank.banked > 0 ? (
+            <AppText variant="caption" tone="tertiary">
+              {bank.balance} of {bank.banked} rest {bank.banked === 1 ? 'day' : 'days'} banked
+              {bank.spent > 0 ? ` Â· ${bank.spent} spent this week` : ''}
+            </AppText>
+          ) : null}
         </View>
       </View>
 
@@ -172,7 +179,7 @@ export function HabitDetail({
             backgroundColor: colors.dangerSoft,
           }}>
           <AppText variant="small" tone="secondary">
-            Delete “{habit.name}” and its whole history? This cannot be undone.
+            Delete â€œ{habit.name}â€ and its whole history? This cannot be undone.
           </AppText>
           <View style={{ flexDirection: 'row', gap: Space.lg }}>
             <TextLink label="Delete" tone="danger" onPress={onDelete} />
@@ -181,7 +188,7 @@ export function HabitDetail({
         </View>
       ) : (
         <TextLink
-          label={deleting ? 'Deleting…' : 'Delete habit'}
+          label={deleting ? 'Deletingâ€¦' : 'Delete habit'}
           align="center"
           tone="danger"
           onPress={() => setConfirmDelete(true)}

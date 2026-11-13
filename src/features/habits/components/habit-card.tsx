@@ -7,7 +7,14 @@ import { Space } from '@/constants/theme';
 import { useTheme } from '@/lib/use-theme';
 
 import { isScheduledOn, scheduleLabel, weekDays } from '../schedule';
-import { currentStreak, isDone, ratePercent, streakLabel, todayState } from '../stats';
+import {
+  daysSinceLastCompletion,
+  isDone,
+  ratePercent,
+  restDayBank,
+  rustOpacity,
+  todayState,
+} from '../stats';
 import { toDateString } from '@/lib/dates';
 import type { Habit } from '@/types/database';
 import { HabitBadge } from './habit-badge';
@@ -28,24 +35,26 @@ type HabitCardProps = {
 export function HabitCard({ habit, done, today, onToggleToday, onOpen }: HabitCardProps) {
   const { colors } = useTheme();
 
-  const streak = currentStreak(habit, done, today);
   const rate = ratePercent(habit, done, 30, today);
+  const rate7 = ratePercent(habit, done, 7, today);
   const state = todayState(habit, done, today);
   const restToday = state === 'rest';
 
   const days = weekDays(today);
+  const rust = rustOpacity(daysSinceLastCompletion(done, today));
+  const bank = restDayBank(habit, done, today);
 
   // One spoken sentence for the whole card, so the dots are decoration only.
   const spoken = [
     habit.name,
     scheduleLabel(habit),
     restToday ? 'rest day today' : state === 'done' ? 'done today' : 'not done today',
-    streakLabel(streak, habit),
+    `${rate7}% in the last 7 days`,
     `${rate}% in the last 30 days`,
   ].join(', ');
 
   return (
-    <Card padded={false}>
+    <Card padded={false} style={{ opacity: rust }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: Space.md }}>
         <HabitBadge icon={habit.icon} color={habit.color} />
 
@@ -69,11 +78,21 @@ export function HabitCard({ habit, done, today, onToggleToday, onOpen }: HabitCa
               {scheduleLabel(habit)}
             </AppText>
             <AppText variant="caption" tone="tertiary">
-              ·
+              Â·
             </AppText>
-            <AppText variant="caption" tone={streak > 0 ? 'accent' : 'tertiary'}>
-              {streakLabel(streak, habit)}
+            <AppText variant="caption" tone={rate7 >= 70 ? 'accent' : 'tertiary'}>
+              {rate7}% / 7d
             </AppText>
+            {bank.balance > 0 ? (
+              <>
+                <AppText variant="caption" tone="tertiary">
+                  Â·
+                </AppText>
+                <AppText variant="caption" tone="tertiary">
+                  {bank.balance} rest {bank.balance === 1 ? 'day' : 'days'} banked
+                </AppText>
+              </>
+            ) : null}
           </View>
 
           <View
@@ -133,7 +152,7 @@ export function HabitCard({ habit, done, today, onToggleToday, onOpen }: HabitCa
             paddingVertical: Space.xs + 2,
           }}>
           <AppText variant="caption" tone="tertiary">
-            Rest day — {scheduleLabel(habit)}. You can still check it in.
+            Rest day â€” {scheduleLabel(habit)}. You can still check it in.
           </AppText>
         </View>
       ) : null}
