@@ -35,6 +35,7 @@ import {
 } from '@/features/tasks/queries';
 import { TodayHabitRow } from '@/features/today/components/today-habit-row';
 import { greetingFor, greetingName, habitsForToday, todayProgress } from '@/features/today/summary';
+import { seasonProgress } from '@/features/habits/seasons';
 import { ProofThumbnail } from '@/features/proofs/components/proof-thumbnail';
 import { buildProofPath } from '@/features/proofs/paths';
 import {
@@ -74,6 +75,8 @@ export default function TodayScreen() {
 
   const name = greetingName(profileQuery.data?.display_name ?? null);
   const greeting = greetingFor(today);
+
+  const season = seasonProgress(profileQuery.data?.current_season_start ?? null, today);
 
   const habitsLoading = habitsQuery.isPending || logsQuery.isPending;
   const tasksLoading = tasksQuery.isPending;
@@ -282,6 +285,36 @@ export default function TodayScreen() {
             </Pressable>
           }
         />
+
+        {season.complete ? (
+          <View style={{ marginTop: Space.md, marginBottom: Space.lg }}>
+            <Card padded={false}>
+              <Pressable
+                onPress={() => router.push('/seasons/review' as any)}
+                accessibilityRole="button"
+                accessibilityLabel="Review your season"
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: Space.md,
+                  padding: Space.md + 2,
+                  opacity: pressed ? 0.7 : 1,
+                })}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <AppText variant="smallStrong" color={colors.accent}>
+                    Your 30-day season ended
+                  </AppText>
+                  <AppText variant="caption" tone="secondary">
+                    Look back at it, then start the next one.
+                  </AppText>
+                </View>
+                <AppText variant="smallStrong" color={colors.accent}>
+                  Review →
+                </AppText>
+              </Pressable>
+            </Card>
+          </View>
+        ) : null}
 
         <View style={{ marginTop: Space.md, marginBottom: Space.lg }}>
           <ReminderBanner onOpen={() => router.push('/journal/review')} />

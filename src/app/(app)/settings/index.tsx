@@ -16,6 +16,7 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { useProfile, useUpdateProfile } from '@/features/auth/use-profile';
 import { UpgradeAccountSheet } from '@/features/auth/components/upgrade-account-sheet';
 import { fetchExportData, toCsv } from '@/features/export/api';
+import { createShareToken, revokeShare } from '@/features/sharing/api';
 import { signOut, deleteAccount } from '@/features/auth/api';
 import { usePreferences, type ThemeMode } from '@/lib/preferences';
 import { useTheme } from '@/lib/use-theme';
@@ -142,6 +143,9 @@ export default function SettingsScreen() {
   const [exporting, setExporting] = useState<'json' | 'csv' | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const profile = profileQuery.data;
   const eveningTime = (profile?.evening_review_time ?? '20:00').slice(0, 5);
@@ -224,6 +228,34 @@ export default function SettingsScreen() {
       setExportMessage(friendlyDataError(cause));
     } finally {
       setExporting(null);
+    }
+  }
+
+  async function handleShare() {
+    setSharing(true);
+    setShareMessage(null);
+    try {
+      const token = await createShareToken();
+      setShareToken(token);
+      setShareMessage('Link created. Copy it and send it to someone you trust.');
+    } catch (cause) {
+      setShareMessage(cause instanceof Error ? cause.message : 'Could not create the link.');
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function handleRevoke() {
+    if (!shareToken) return;
+    setSharing(true);
+    try {
+      await revokeShare(shareToken);
+      setShareToken(null);
+      setShareMessage('Link revoked.');
+    } catch (cause) {
+      setShareMessage(cause instanceof Error ? cause.message : 'Could not revoke the link.');
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -454,6 +486,47 @@ export default function SettingsScreen() {
           {exportMessage ? (
             <AppText variant="caption" tone="secondary" style={{ marginTop: Space.sm }}>
               {exportMessage}
+            </AppText>
+          ) : null}
+        </Card>
+      </View>
+
+      <View style={{ marginTop: Space.xxl }}>
+        <SectionHeader title="Sharing" />
+        <Card>
+          <AppText variant="bodyStrong">Share your pace</AppText>
+          <AppText variant="small" tone="secondary" style={{ marginTop: Space.xxs }}>
+            A read-only link a partner can open: just your pace ring and today&apos;s done counts,
+            no details. Revoke it any time.
+          </AppText>
+
+          {shareToken ? (
+            <View style={{ marginTop: Space.md, gap: Space.sm }}>
+              <AppText variant="caption" tone="secondary" selectable>
+                {shareToken}
+              </AppText>
+              <Button
+                label={sharing ? 'Revoking…' : 'Revoke link'}
+                variant="secondary"
+                onPress={() => void handleRevoke()}
+                loading={sharing}
+                disabled={sharing}
+              />
+            </View>
+          ) : (
+            <View style={{ marginTop: Space.md }}>
+              <Button
+                label={sharing ? 'Creating…' : 'Create a share link'}
+                onPress={() => void handleShare()}
+                loading={sharing}
+                disabled={sharing}
+              />
+            </View>
+          )}
+
+          {shareMessage ? (
+            <AppText variant="caption" tone="secondary" style={{ marginTop: Space.sm }}>
+              {shareMessage}
             </AppText>
           ) : null}
         </Card>

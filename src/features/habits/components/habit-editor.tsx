@@ -32,6 +32,7 @@ type Draft = {
   name: string;
   icon: HabitIconKey;
   color: string;
+  identity: string;
   frequencyType: FrequencyType;
   days: number[];
   target: number;
@@ -44,6 +45,7 @@ function draftFrom(habit: Habit | null): Draft {
       name: '',
       icon: DEFAULT_HABIT_ICON,
       color: HABIT_COLORS[0],
+      identity: '',
       frequencyType: 'daily',
       // Sensible starting point for "chosen days": the working week.
       days: [1, 2, 3, 4, 5],
@@ -58,6 +60,7 @@ function draftFrom(habit: Habit | null): Draft {
     // picker opens on the icon the user already chose.
     icon: habitIconKey(habit.icon) ?? DEFAULT_HABIT_ICON,
     color: habit.color,
+    identity: habit.identity ?? '',
     frequencyType: habit.frequency_type,
     days: habit.frequency_days,
     target: habit.target_per_week ?? 3,
@@ -137,6 +140,7 @@ export function HabitEditor({ visible, onClose, habit }: HabitEditorProps) {
       name: draft.name,
       icon: draft.icon,
       color: draft.color,
+      identity: draft.identity.trim() || null,
       frequency_type: draft.frequencyType,
       frequency_days: draft.days,
       target_per_week: draft.target,
@@ -229,6 +233,15 @@ export function HabitEditor({ visible, onClose, habit }: HabitEditorProps) {
         autoFocus={!habit}
         returnKeyType="done"
         maxLength={120}
+        editable={!saving}
+      />
+
+      <TextField
+        label="Identity (optional)"
+        value={draft.identity}
+        onChangeText={(identity) => update({ identity })}
+        placeholder="I am someone who reads"
+        maxLength={80}
         editable={!saving}
       />
 

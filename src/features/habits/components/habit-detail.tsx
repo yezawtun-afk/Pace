@@ -14,7 +14,15 @@ import { useTheme } from '@/lib/use-theme';
 import type { Habit } from '@/types/database';
 
 import { scheduleLabel } from '../schedule';
-import { currentStreak, ratePercent, restDayBank, streakLabel, weekBuckets } from '../stats';
+import { useUpdateHabit } from '../queries';
+import {
+  adaptiveTarget,
+  currentStreak,
+  ratePercent,
+  restDayBank,
+  streakLabel,
+  weekBuckets,
+} from '../stats';
 import { MonthHeatmap } from './month-heatmap';
 import { WeekBars } from './week-bars';
 
@@ -56,15 +64,20 @@ export function HabitDetail({
   error,
 }: HabitDetailProps) {
   const { colors } = useTheme();
+  const updateHabit = useUpdateHabit();
   const [month, setMonth] = useState(() => startOfMonth(today));
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [viewerPath, setViewerPath] = useState<string | null>(null);
+  const [acceptingTarget, setAcceptingTarget] = useState(false);
   const viewerUrl = useProofUrl(viewerPath).data ?? null;
 
   const streak = currentStreak(habit, done, today);
   const buckets = weekBuckets(habit, done, today, 8);
   const weekly = habit.frequency_type === 'weekly_target';
   const bank = restDayBank(habit, done, today);
+  const suggestion = adaptiveTarget(habit, done, today);
+  const showSuggestion =
+    suggestion.suggested !== null && suggestion.suggested !== (habit.target_per_week ?? null);
 
   return (
     <Sheet
@@ -114,6 +127,52 @@ export function HabitDetail({
           ) : null}
         </View>
       </View>
+
+      {showSuggestion ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Space.sm,
+            padding: Space.md,
+            borderRadius: Radius.md,
+            backgroundColor: colors.accentSoft,
+            borderWidth: 1,
+            borderColor: colors.accentBorder,
+          }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <AppText variant="smallStrong" color={colors.accent}>
+              {suggestion.reason}
+            </AppText>
+            <AppText variant="caption" tone="secondary">
+              Suggested target: {suggestion.suggested}x per week.
+            </AppText>
+          </View>
+          <Button
+            label="Accept"
+            fullWidth={false}
+            loading={acceptingTarget}
+            onPress={() => {
+              setAcceptingTarget(true);
+              void updateHabit
+                .mutateAsync({
+                  id: habit.id,
+                  draft: {
+                    name: habit.name,
+                    icon: habit.icon,
+                    color: habit.color,
+                    frequency_type: habit.frequency_type,
+                    frequency_days: habit.frequency_days,
+                    target_per_week: suggestion.suggested,
+                    ask_for_proof: habit.ask_for_proof,
+                    identity: habit.identity,
+                  },
+                })
+                .finally(() => setAcceptingTarget(false));
+            }}
+          />
+        </View>
+      ) : null}
 
       <View style={{ flexDirection: 'row' }}>
         {RATE_WINDOWS.map((days, index) => (

@@ -20,6 +20,7 @@ function makeHabit(overrides: Partial<Habit>): Habit {
     reminder_time: null,
     archived: false,
     ask_for_proof: false,
+    identity: null,
     created_at: '2026-11-01T00:00:00.000Z',
     updated_at: '2026-11-01T00:00:00.000Z',
     ...overrides,

@@ -29,6 +29,7 @@ export type Profile = {
   habit_reminders_enabled: boolean;
   task_reminders_enabled: boolean;
   evening_reminder_enabled: boolean;
+  current_season_start: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -43,6 +44,7 @@ export type ProfileInsert = {
   habit_reminders_enabled?: boolean;
   task_reminders_enabled?: boolean;
   evening_reminder_enabled?: boolean;
+  current_season_start?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -63,6 +65,7 @@ export type Habit = {
   reminder_time: TimeString | null;
   archived: boolean;
   ask_for_proof: boolean;
+  identity: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -79,6 +82,7 @@ export type HabitInsert = {
   reminder_time?: TimeString | null;
   archived?: boolean;
   ask_for_proof?: boolean;
+  identity?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -226,6 +230,24 @@ type TableDefinition<Row, Insert, Update> = {
   Relationships: [];
 };
 
+export type PaceShare = {
+  id: string;
+  user_id: string;
+  token: string;
+  created_at: string;
+  revoked_at: string | null;
+};
+
+export type PaceShareInsert = {
+  id?: string;
+  user_id: string;
+  token: string;
+  created_at?: string;
+  revoked_at?: string | null;
+};
+
+export type PaceShareUpdate = Partial<PaceShareInsert>;
+
 export type Database = {
   public: {
     Tables: {
@@ -241,6 +263,7 @@ export type Database = {
         JournalEntryTagInsert,
         JournalEntryTagInsert
       >;
+      pace_shares: TableDefinition<PaceShare, PaceShareInsert, PaceShareUpdate>;
     };
     Views: Record<string, never>;
     Functions: {

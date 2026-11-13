@@ -49,6 +49,9 @@ export type HabitDraft = {
   /** 0 = Sunday … 6 = Saturday. Only used by the "chosen days" schedule. */
   frequency_days?: number[];
   target_per_week?: number | null;
+  ask_for_proof?: boolean;
+  identity?: string | null;
+  archived?: boolean;
 };
 
 /**
@@ -66,6 +69,9 @@ function toRow(draft: HabitDraft) {
     frequency_type: draft.frequency_type,
     frequency_days: weekdays ? (draft.frequency_days ?? []) : [],
     target_per_week: weekly ? (draft.target_per_week ?? 3) : null,
+    ask_for_proof: draft.ask_for_proof,
+    identity: draft.identity ?? null,
+    archived: draft.archived,
   };
 }
 

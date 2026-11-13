@@ -72,6 +72,15 @@ export function HabitCard({ habit, done, today, onToggleToday, onOpen }: HabitCa
           <AppText variant="bodyStrong" numberOfLines={2}>
             {habit.name}
           </AppText>
+          {habit.identity ? (
+            <AppText
+              variant="caption"
+              tone="secondary"
+              numberOfLines={1}
+              style={{ fontStyle: 'italic' }}>
+              {habit.identity}
+            </AppText>
+          ) : null}
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Space.xs + 2 }}>
             <AppText variant="caption" tone="tertiary">

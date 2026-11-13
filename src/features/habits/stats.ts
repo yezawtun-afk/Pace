@@ -261,3 +261,36 @@ export function streakLabel(streak: number, habit: HabitSchedule): string {
 
   return streak === 1 ? '1 day streak' : `${streak} day streak`;
 }
+
+export type AdaptiveTarget = { suggested: number | null; reason: string };
+
+/** Suggests a new weekly target after three weeks of consistent (or poor) results. */
+export function adaptiveTarget(
+  habit: HabitSchedule,
+  logs: Set<string>,
+  today: Date,
+): AdaptiveTarget {
+  if (habit.frequency_type !== 'weekly_target') {
+    return { suggested: null, reason: '' };
+  }
+
+  const current = habit.target_per_week ?? 3;
+  const thisWeek = weekStart(startOfDay(today));
+
+  const hits = [1, 2, 3].map((index) => {
+    const start = addDays(thisWeek, -7 * index);
+    const days = weekDays(start);
+    const done = days.filter((day) => logs.has(toDateString(day))).length;
+    return done >= current;
+  });
+
+  const hitCount = hits.filter(Boolean).length;
+
+  if (hitCount === 3 && current < 7) {
+    return { suggested: current + 1, reason: 'You hit your target 3 weeks running.' };
+  }
+  if (hitCount <= 1 && current > 1) {
+    return { suggested: current - 1, reason: 'A lower target may fit better right now.' };
+  }
+  return { suggested: null, reason: '' };
+}
